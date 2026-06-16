@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="{{ user.current_lang }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- META SEO UTAMA -->
+    <title>{{ user.meta_title }}</title>
+    <meta name="description" content="{{ user.meta_desc }}">
+    <meta name="author" content="Daniel Setiawan">
+    <meta name="robots" content="index, follow">
+
+    <!-- OPEN GRAPH (Untuk Kebutuhan Share di LinkedIn / WhatsApp agar muncul preview kartu yang rapi) -->
+    <meta property="og:title" content="{{ user.meta_title }}">
+    <meta property="og:description" content="{{ user.meta_desc }}">
+    <meta property="og:image" content="{{ url_for('static', filename='images/profile-photo-daniel-setiawan.jpg', _external=True) }}">
+    <meta property="og:type" content="website">
+  
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mode.css') }}">
+    
+  	<link rel="alternate" hreflang="id" href="{{ request.base_url }}?lang=id" />
+	<link rel="alternate" hreflang="en" href="{{ request.base_url }}?lang=en" />
+	<link rel="alternate" hreflang="x-default" href="{{ request.base_url }}?lang=id" />
+  
+    <script>
+        // Mencegah screen-flicker sebelum halaman dirender browser
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 flex items-center justify-center min-h-screen p-4 transition-colors duration-300">
+
+    <!-- CONTAINER KARTU UTAMA (DITAMBAHKAN KELAS theme-card) -->
+    <div class="theme-card max-w-md w-full bg-slate-800/60 rounded-2xl shadow-xl p-8 text-center border border-slate-700/50 relative flex flex-col justify-between items-center backdrop-blur-md min-h-[580px] transition-all duration-300">
+        
+        <div class="w-full flex flex-col items-center">
+            <!-- TOP BAR: TOGGLE UTAMA -->
+            <div class="w-full flex justify-between items-center mb-6">
+                <!-- Kiri: Switch Tema (DITAMBAHKAN KELAS theme-btn-toggle) -->
+                <button onclick="toggleTheme()" class="theme-btn-toggle w-8 h-8 bg-slate-900/50 border border-slate-700 text-slate-400 hover:text-indigo-400 rounded-full flex items-center justify-center cursor-pointer transition-all">
+                    <i id="theme-icon" class="fas fa-moon text-xs"></i>
+                </button>
+
+                <!-- Kanan: Switch Bahasa (DITAMBAHKAN KELAS theme-btn-toggle) -->
+                <a href="?lang={{ user.switch_lang_code }}" 
+                   class="theme-btn-toggle relative flex items-center w-20 h-8 p-1 bg-slate-900 rounded-full border border-slate-700 cursor-pointer select-none group text-[10px] font-mono">
+
+                    <div class="absolute top-1 bottom-1 w-[34px] bg-indigo-600 rounded-full transition-all duration-300 shadow-sm flex items-center justify-center z-20
+                        {% if user.current_lang == 'id' %} left-1 {% else %} left-[42px] {% endif %}">
+                        <span class="text-white font-black uppercase">
+                            {{ user.current_lang }}
+                        </span>
+                    </div>
+
+                    <span class="w-1/2 text-center font-bold text-slate-500 z-10 transition-colors {% if user.current_lang == 'id' %} opacity-0 {% endif %}">ID</span>
+                    <span class="w-1/2 text-center font-bold text-slate-500 z-10 transition-colors {% if user.current_lang == 'en' %} opacity-0 {% endif %}">EN</span>
+                </a>
+            </div>
+            
+            <!-- LOGO BRAND (DITAMBAHKAN KELAS theme-logo) -->
+            <div class="flex justify-center mb-4">
+                <img class="theme-logo h-12 w-auto object-contain opacity-90 transition-all duration-300" src="{{ url_for('static', filename='images/logo-daniel-setiawan-white.png') }}" alt="Logo">
+            </div>
+
+            <div class="theme-border-divider w-full border-t border-slate-700/50 my-4"></div>
+
+            <!-- FOTO PROFIL -->
+            <div class="relative w-35 h-35 mx-auto mb-5 mt-4 bg-[#1e293b] rounded-full shadow-[0_0_15px_rgba(99,102,241,0.2)] block">
+                <img class="object-cover object-[50%_30%] w-full h-full border-4 border-indigo-500 rounded-full" src="{{ url_for('static', filename='images/profile-photo-daniel-setiawan.jpg') }}" alt="{{ user.name }}" loading="eager" decoding="sync">
+                <!-- DITAMBAHKAN KELAS theme-dot -->
+                <div class="theme-dot absolute bottom-1 right-3 w-3.5 h-3.5 bg-green-500 border-2 border-[#1e293b] rounded-full animate-pulse z-20"></div>
+            </div>
+
+            <!-- TIPOGRAFI (DITAMBAHKAN KELAS theme-text-main, theme-text-role, theme-text-sub) -->
+            <h1 class="theme-text-main text-xl font-bold tracking-tight mb-1 text-white w-full transition-colors">{{ user.name }}</h1>
+            <p class="theme-text-role text-indigo-400 font-medium text-xs mb-4 w-full transition-colors">{{ user.title }}</p>
+            <p class="theme-text-sub text-slate-400 text-xs leading-relaxed mb-8 w-full transition-colors">{{ user.bio }}</p>
+
+            <!-- TAUTAN UTAMA -->
+            <div class="space-y-4 w-full text-sm">
+                {% for link in user.links %}
+                
+                <a href="{{ link.url }}" {% if not link.is_internal %} target="_blank" rel="noopener noreferrer" {% endif %}
+                   class="flex items-center justify-between w-full px-5 py-3 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-0.5 shadow-sm group 
+                   {% if link.is_internal %} bg-gradient-to-r from-indigo-600 to-violet-600 text-white ring-2 ring-indigo-500/20 {% else %} theme-link-ext bg-slate-700 text-slate-200 {% endif %}">
+                    <div class="flex items-center space-x-3">
+                        <i class="{{ link.icon }} {% if link.is_internal %} text-white {% else %} text-slate-400 group-hover:text-white transition-colors {% endif %}"></i>
+                        <span>{{ link.name }}</span>
+                    </div>
+                    {% if link.is_internal %}
+                        <span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                    {% else %}
+                        <i class="fas fa-chevron-right text-xs text-slate-500 group-hover:text-white transition-colors"></i>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="theme-border-divider w-full mt-8 pt-6 border-t border-slate-700/50 text-xs text-slate-500">&copy; 2026 {{ user.name }}. All Rights Reserved.</div>
+    </div>
+
+    <script>
+        function updateIcon() {
+            const icon = document.getElementById('theme-icon');
+            if (document.documentElement.getAttribute('data-theme') === 'light') { 
+                icon.className = 'fas fa-sun text-xs text-amber-500'; 
+            } else { 
+                icon.className = 'fas fa-moon text-xs'; 
+            }
+        }
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon();
+        }
+        updateIcon();
+    </script>
+</body>
+</html>

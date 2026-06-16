@@ -1,0 +1,133 @@
+/* ==========================================================================
+   GLOBAL THEME PANEL SWITCHER - HIGH CONTRAST REVISION
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   A. HALAMAN UTAMA / HOMEPAGE HUB
+   -------------------------------------------------------------------------- */
+html[data-theme="light"] body { 
+    background-color: #f8fafc !important; 
+    color: #0f172a !important; 
+}
+
+html[data-theme="light"] .theme-card { 
+    background-color: #ffffff !important; 
+    border-color: #e2e8f0 !important; 
+    box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.05), 0 10px 10px -5px rgba(15, 23, 42, 0.02) !important; 
+}
+
+html[data-theme="light"] .theme-text-main { 
+    color: #0f172a !important; 
+}
+
+html[data-theme="light"] .theme-text-role { 
+    color: #4f46e5 !important; 
+    font-weight: 600 !important;
+}
+
+html[data-theme="light"] .theme-text-sub { 
+    color: #475569 !important; 
+}
+
+html[data-theme="light"] .theme-btn-toggle { 
+    background-color: #f1f5f9 !important; 
+    border-color: #cbd5e1 !important; 
+    color: #334155 !important;
+}
+
+html[data-theme="light"] .theme-link-ext { 
+    background-color: #f1f5f9 !important; 
+    color: #1e293b !important; 
+    border: 1px solid #e2e8f0 !important;
+}
+
+html[data-theme="light"] .theme-link-ext:hover { 
+    background-color: #e2e8f0 !important; 
+    color: #4f46e5 !important; 
+    border-color: #c7d2fe !important;
+}
+
+html[data-theme="light"] .theme-link-ext i { 
+    color: #4f46e5 !important; 
+}
+
+html[data-theme="light"] .theme-link-ext span { 
+    color: #1e293b !important;
+}
+
+html[data-theme="light"] .theme-link-ext:hover span { 
+    color: #4f46e5 !important;
+}
+
+/* --------------------------------------------------------------------------
+   B. HALAMAN RESUME INTERAKTIF
+   -------------------------------------------------------------------------- */
+html[data-theme="light"] .theme-sidebar { 
+    background-color: #ffffff !important; 
+    border-color: #e2e8f0 !important; 
+}
+
+html[data-theme="light"] .theme-main-content { 
+    background-color: #f8fafc !important; 
+}
+
+html[data-theme="light"] .theme-btn-box { 
+    background-color: #ffffff !important; 
+    border-color: #cbd5e1 !important; 
+    color: #334155 !important; 
+}
+
+html[data-theme="light"] .theme-border-divider { 
+    border-color: #e2e8f0 !important; 
+}
+
+html[data-theme="light"] .theme-title-main { 
+    color: #0f172a !important; 
+}
+
+html[data-theme="light"] .theme-title-sub { 
+    color: #4f46e5 !important; 
+}
+
+html[data-theme="light"] .theme-text-muted { 
+    color: #475569 !important; 
+}
+
+html[data-theme="light"] .theme-text-body { 
+    color: #1e293b !important; 
+}
+
+html[data-theme="light"] .theme-bento-box { 
+    background-color: #ffffff !important; 
+    border-color: #e2e8f0 !important; 
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -1px rgba(0,0,0,0.02) !important; 
+}
+
+html[data-theme="light"] .theme-badge { 
+    background-color: #f1f5f9 !important; 
+    color: #334155 !important; 
+    border: 1px solid #e2e8f0 !important;
+    font-weight: 500 !important;
+}
+
+html[data-theme="light"] .theme-badge-period { 
+    background-color: #eff6ff !important; 
+    color: #1d4ed8 !important; 
+    border: 1px solid #bfdbfe !important; 
+}
+
+html[data-theme="light"] .theme-timeline-node { 
+    background-color: #ffffff !important; 
+    border-color: #4f46e5 !important; 
+}
+
+/* --------------------------------------------------------------------------
+   C. ORNAMEN GLOBAL UTILS
+   -------------------------------------------------------------------------- */
+html[data-theme="light"] .theme-logo { 
+    filter: invert(1) brightness(0.2) !important; 
+}
+
+html[data-theme="light"] .theme-dot { 
+    border-color: #ffffff !important; 
+}
