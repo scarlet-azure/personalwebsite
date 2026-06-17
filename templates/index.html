@@ -19,6 +19,8 @@
     <!-- Tailwind CSS v4 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  	<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mode.css') }}">
     
@@ -81,23 +83,44 @@
 
             <!-- TAUTAN UTAMA -->
             <div class="space-y-4 w-full text-sm">
-                {% for link in user.links %}
-                
-                <a href="{{ link.url }}" {% if not link.is_internal %} target="_blank" rel="noopener noreferrer" {% endif %}
-                   class="flex items-center justify-between w-full px-5 py-3 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-0.5 shadow-sm group 
-                   {% if link.is_internal %} bg-gradient-to-r from-indigo-600 to-violet-600 text-white ring-2 ring-indigo-500/20 {% else %} theme-link-ext bg-slate-700 text-slate-200 {% endif %}">
-                    <div class="flex items-center space-x-3">
-                        <i class="{{ link.icon }} {% if link.is_internal %} text-white {% else %} text-slate-400 group-hover:text-white transition-colors {% endif %}"></i>
-                        <span>{{ link.name }}</span>
-                    </div>
-                    {% if link.is_internal %}
-                        <span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                    {% for link in user.links %}
+                    
+                    {% if 'Envelope' in link.icon or 'envelope' in link.icon or 'Email' in link.name or 'email' in link.name or 'Berdiskusi' in link.name or 'Contact' in link.name %}
+                        {% set target_url = '/contact?lang=' ~ user.current_lang %}
+                        {% set is_internal_link = true %}
+                        {% set is_contact_btn = true %}
                     {% else %}
-                        <i class="fas fa-chevron-right text-xs text-slate-500 group-hover:text-white transition-colors"></i>
+                        {% set target_url = link.url %}
+                        {% set is_internal_link = link.is_internal %}
+                        {% set is_contact_btn = false %}
                     {% endif %}
-                </a>
-                {% endfor %}
-            </div>
+                    
+                    <a href="{{ target_url }}" {% if not is_internal_link %} target="_blank" rel="noopener noreferrer" {% endif %}
+                       class="flex items-center justify-between w-full px-5 py-3 rounded-xl font-medium transition-all duration-300 transform hover:-translate-y-0.5 shadow-sm group 
+                       {% if is_internal_link and not is_contact_btn %} 
+                           /* Hanya tombol resume/portofolio utama yang berwarna ungu gradien */
+                           bg-gradient-to-r from-indigo-600 to-violet-600 text-white ring-2 ring-indigo-500/20 
+                       {% else %} 
+                           /* Tombol eksternal DAN tombol kontak menggunakan warna abu-abu slate kalem */
+                           theme-link-ext bg-slate-700 text-slate-200 
+                       {% endif %}">
+                       
+                        <div class="flex items-center space-x-3">
+                            <i class="{{ link.icon }} {% if is_internal_link and not is_contact_btn %} text-white {% else %} text-slate-400 group-hover:text-white transition-colors {% endif %}"></i>
+                            <span>{{ link.name }}</span>
+                        </div>
+
+                        {% if is_internal_link and not is_contact_btn %}
+                            <span class="flex h-2 w-2 relative">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                        {% else %}
+                            <i class="fas fa-chevron-right text-xs text-slate-500 group-hover:text-white transition-colors"></i>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
         </div>
 
         <div class="theme-border-divider w-full mt-8 pt-6 border-t border-slate-700/50 text-xs text-slate-500">&copy; 2026 {{ user.name }}. All Rights Reserved.</div>

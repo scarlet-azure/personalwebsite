@@ -1,12 +1,16 @@
-# Python environment & cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+# Mengabaikan Virtual Environment lokal Mac
+.venv/
 env/
 venv/
-.env
+__pycache__/
+*.pyc
 
-# MacOS files
+# Mengabaikan Database SQLite lokal (Agar password admin & pesan tidak bocor)
+instance/
+*.db
+
+# Mengabaikan file sistem Mac OS
 .DS_Store
+
+# Mengabaikan file environment keys (jika ada)
+.env

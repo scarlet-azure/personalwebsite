@@ -1,8 +1,93 @@
 import sqlite3
-from flask import Flask, render_template, request
+import re
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 app = Flask(__name__)
 DB_NAME = "resume.db"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'surya-abadi-printing-app-key-2026-super-secret!'
+db = SQLAlchemy(app)
+
+# Regex standar internasional untuk validasi email
+EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+# ================= 1. KONFIGURASI FLASK-LOGIN =================
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'admin_login' # Redirect ke halaman login jika belum autentikasi
+
+# ================= 2. MODEL USER ADMIN =================
+class AdminUser(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return AdminUser.query.get(int(user_id))
+
+# ================= 3. ROUTE LOGIN ADMIN =================
+@app.route('/admin')
+def admin_index():
+    if current_user.is_authenticated:
+        return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if current_user.is_authenticated:
+        return redirect(url_for('admin_dashboard'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        admin = AdminUser.query.filter_by(username=username).first()
+        
+        if admin and check_password_hash(admin.password_hash, password):
+            login_user(admin)
+            return redirect(url_for('admin_dashboard'))
+            
+        flash('Username atau password salah!', 'error')
+        
+    return render_template('admin_login.html')
+
+# ================= 4. ROUTE DASHBOARD UTAMA (TERPROTEKSI) =================
+@app.route('/admin/dashboard')
+@login_required
+def admin_dashboard():
+    # Tarik semua pesan dari database, urutkan dari yang terbaru
+    messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
+    return render_template('admin_dashboard.html', messages=messages)
+
+# ================= 5. ROUTE HAPUS PESAN (API AJAX) =================
+@app.route('/admin/message/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_message(id):
+    msg = ContactMessage.query.get_or_400(id)
+    try:
+        db.session.delete(msg)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Pesan berhasil dihapus."}), 200
+    except:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Gagal menghapus pesan."}), 500
+
+# ================= 6. ROUTE LOGOUT =================
+@app.route('/admin/logout')
+@login_required
+def admin_logout():
+    logout_user()
+    return redirect(url_for('admin_login'))
+
+with app.app_context():
+    db.create_all()  # Ini memastikan tabel contact_message otomatis dibuat jika belum ad
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -71,7 +156,7 @@ MULTILINGUAL_DATA = {
         "name": "Daniel Setiawan",
         "title": "General Manager at Surya Abadi Printing",
         "bio": "Profesional dinamis dengan lebih dari 10 tahun pengalaman di industri percetakan & pengemasan, spesialisasi dalam cetak stiker vinyl statis. Berpengalaman meningkatkan efisiensi operasional dan strategi berbasis analisis data.",
-        "meta_title": "Daniel Setiawan | Portofolio, Percetakan, dan Digital Enthusiast",
+        "meta_title": "Daniel Setiawan | Portofolio, Spesialis Percetakan, dan Digital Enthusiast",
         "meta_desc": "Portofolio profesional Daniel Setiawan, General Manager di Surya Abadi Printing. Ahli dalam manajemen operasional cetak stiker vinyl, digital marketing, dan web development.",
         "current_lang": "id", "switch_lang_text": "Switch to English", "switch_lang_code": "en"
     },
@@ -79,7 +164,7 @@ MULTILINGUAL_DATA = {
         "name": "Daniel Setiawan",
         "title": "General Manager at Surya Abadi Printing",
         "bio": "Dynamic and synergistic professional with over 10 years of experience in the printing and packaging industry, specializing in static vinyl sticker print. Expert in driving operational efficiency and data analytics.",
-        "meta_title": "Daniel Setiawan | Portfolio & Printing, and Digital Enthusiast",
+        "meta_title": "Daniel Setiawan | Portfolio, Printing Specialist, and Digital Enthusiast",
         "meta_desc": "Professional portfolio of Daniel Setiawan, General Manager at Surya Abadi Printing. Specialized in vinyl sticker printing production, data analytics, and frontend development.",
         "current_lang": "en", "switch_lang_text": "Ubah ke Bahasa Indonesia", "switch_lang_code": "id"
     }
@@ -95,7 +180,7 @@ RESUME_TEXTS = {
         "history_title": "Riwayat Profesional", 
         "org_title": "Organisasi", 
         "achieve_title": "Penghargaan & Sertifikasi",
-        "meta_title": "Resume Interaktif Daniel Setiawan | General Manager Percetaka Surya Abadi Printing, Pengembang Web Independen, and Digital Enthusiast",
+        "meta_title": "Resume Daniel Setiawan | General Manager Percetaka Surya Abadi Printing, Pengembang Web Independen, and Digital Enthusiast",
         "meta_desc": "Riwayat hidup dan pengalaman profesional Daniel Setiawan sebagai General Manager Surya Abadi Printing dan Frontend Developer. Spesialisasi manajemen cetak stiker & analisis data bisnis.",
         "current_lang": "id", 
         "switch_lang_code": "en"
@@ -108,22 +193,61 @@ RESUME_TEXTS = {
         "history_title": "Professional Experience", 
         "org_title": "Organizations", 
         "achieve_title": "Awards & Certifications",
-        "meta_title": "Daniel Setiawan Interactive Resume | General Manager of Surya Abadi Printing, Independent Web Developer, and Digital Enthusiast",
+        "meta_title": "Daniel Setiawan's Resume | General Manager of Surya Abadi Printing, Independent Web Developer, and Digital Enthusiast",
         "meta_desc": "Professional resume of Daniel Setiawan, General Manager at Surya Abadi Printing. Detailed history in operations management, data analytics, and modern web engineering.",
         "current_lang": "en", 
         "switch_lang_code": "id"
     }
 }
 
+CONTACT_TEXTS = {
+    "id": {
+        "meta_title": "Hubungi Daniel Setiawan | Hubungi via Email",
+        "meta_desc": "Kirimkan penawaran proyek, diskusi bisnis, atau peluang kerja langsung kepada Daniel Setiawan melalui formulir kontak resmi di sini.",
+        "title": "Hubungi Saya",
+        "subtitle": "Kirimkan pesan, pertanyaan, atau peluang kolaborasi bisnis Anda di sini.",
+        "label_name": "Nama Lengkap",
+        "label_email": "Alamat Email",
+        "label_subject": "Subjek / Perihal",
+        "label_message": "Isi Pesan",
+        "btn_send": "Kirim Pesan",
+        "btn_sending": "Mengirim...",
+        "current_lang": "id",
+        "switch_lang_code": "en"
+    },
+    "en": {
+        "meta_title": "Contact Daniel Setiawan | Get in Touch",
+        "meta_desc": "Send project inquiries, business discussions, or career opportunities directly to Daniel Setiawan via the official contact form here.",
+        "title": "Get In Touch",
+        "subtitle": "Send your messages, inquiries, or business collaboration opportunities here.",
+        "label_name": "Full Name",
+        "label_email": "Email Address",
+        "label_subject": "Subject",
+        "label_message": "Message Content",
+        "btn_send": "Send Message",
+        "btn_sending": "Sending...",
+        "current_lang": "en",
+        "switch_lang_code": "id"
+    }
+}
+
+class ContactMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    subject = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+             
 @app.route('/')
 def home():
     lang = request.args.get('lang', 'id')
     if lang not in MULTILINGUAL_DATA: lang = 'id'
     profile_data = MULTILINGUAL_DATA[lang].copy()
     profile_data["links"] = [
-        {"name": "Interactive Portfolio" if lang == "en" else "Portofolio Interaktif", "url": f"/resume?lang={lang}", "icon": "fas fa-file-invoice", "is_internal": True},
+        {"name": "Find Out About Me" if lang == "en" else "Ketahui Tentang Saya", "url": f"/resume?lang={lang}", "icon": "fas fa-file-invoice", "is_internal": True},
         {"name": "Check my GitHub" if lang == "en" else "Lihat GitHub Saya", "url": "https://github.com/danielsetiawan22", "icon": "fab fa-github", "is_internal": False},
-        {"name": "Email Me" if lang == "en" else "Hubungi via Email", "url": "mailto:hello@danielsetiawan.id", "icon": "fas fa-envelope", "is_internal": False}
+        {"name": "Let's Connect!" if lang == "en" else "Mari Berdiskusi", "url": f"/contact?lang={lang}", "icon": "fas fa-envelope", "is_internal": True}
     ]
     return render_template('index.html', user=profile_data)
 
@@ -146,7 +270,51 @@ def resume():
     
     user_data = {"name": "Daniel Setiawan"}
     return render_template('resume.html', experiences=experiences, skills=skills, achievements=achievements, ui=ui_text, user=user_data)
+    
+@app.route('/contact', methods=['GET', 'POST'])
+def contact_page():
+    # Mengatur bahasa aktif
+    lang = request.args.get('lang', 'id')
+    if lang not in ['id', 'en']:
+        lang = 'id'
+    
+    ui = CONTACT_TEXTS[lang]
 
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        subject = request.form.get('subject')
+        message = request.form.get('message')
+
+        # 1. Cek apakah ada field yang kosong
+        if not name or not email or not subject or not message:
+            err_msg = "Semua field wajib diisi!" if lang == 'id' else "All fields are required!"
+            return jsonify({"status": "error", "message": err_msg}), 400
+
+        # 2. VALIDASI EMAIL: Periksa apakah format email match dengan REGEX
+        if not re.match(EMAIL_REGEX, email.strip()):
+            invalid_msg = "Format alamat email tidak valid!" if lang == 'id' else "Invalid email address format!"
+            return jsonify({"status": "error", "message": invalid_msg}), 400
+
+        # 3. Jika lolos validasi, baru teruskan simpan ke database SQLite
+        try:
+            new_msg = ContactMessage(
+                name=name, 
+                email=email.strip().lower(), # Bersihkan spasi dan paksa huruf kecil
+                subject=subject, 
+                message=message
+            )
+            db.session.add(new_msg)
+            db.session.commit()
+            
+            succ_msg = "Pesan Anda berhasil dikirim!" if lang == 'id' else "Your message has been sent successfully!"
+            return jsonify({"status": "success", "message": succ_msg}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"status": "error", "message": "Database error"}), 500
+
+    return render_template('contact.html', ui=ui)
+        
 @app.route('/robots.txt')
 def robots():
     return "User-agent: *\nDisallow: /admin\nSitemap: https://danielsetiawan.com/sitemap.xml", 200, {'Content-Type': 'text/plain'}

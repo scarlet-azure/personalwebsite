@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="{{ ui.current_lang }}" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ ui.meta_title }}</title>
+    <meta name="description" content="{{ ui.meta_desc }}">
+    <meta name="author" content="Daniel Setiawan">
+    <meta name="robots" content="index, follow">
+
+    <!-- IMPORT GOOGLE FONTS PREMIUM -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS v4 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <style type="text/theme">
+        @theme {
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-display: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mode.css') }}">
+  
+  	<link rel="alternate" hreflang="id" href="{{ request.base_url }}?lang=id" />
+    <link rel="alternate" hreflang="en" href="{{ request.base_url }}?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="{{ request.base_url }}?lang=id" />
+  
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen font-sans m-0 p-0 transition-colors duration-300">
+
+    <div class="w-full min-h-screen flex flex-col md:flex-row">
+        
+        <!-- ================= SIDEBAR NAVIGASI ================= -->
+        <div class="theme-sidebar w-full md:w-24 bg-[#0d1321] border-b md:border-b-0 md:border-r border-slate-800 text-center py-4 md:py-8 flex md:flex-col justify-between md:justify-start items-center px-6 md:px-0 shrink-0 transition-all">
+            <div class="mb-0 md:mb-12 flex justify-center">
+                <a href="/?lang={{ ui.current_lang }}" class="group flex flex-col items-center justify-center text-slate-500 hover:text-indigo-400 transition-colors cursor-pointer">
+                    <img class="theme-logo h-7 md:h-8 w-auto object-contain opacity-80" src="{{ url_for('static', filename='images/logo-daniel-setiawan-white.png') }}" alt="Logo">
+                </a>
+            </div>
+            
+            <div class="flex items-center gap-6 md:flex-col md:space-y-8 md:gap-0">
+                <a href="/?lang={{ ui.current_lang }}" class="group flex flex-col items-center justify-center text-slate-500 hover:text-indigo-400 transition-colors cursor-pointer">
+                    <i class="fas fa-th-large text-base md:text-lg mb-1 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-[9px] md:text-[10px] font-mono tracking-wider font-bold uppercase">Hub</span>
+                </a>
+                <a href="/resume?lang={{ ui.current_lang }}" class="group flex flex-col items-center justify-center text-slate-500 hover:text-indigo-400 transition-colors cursor-pointer">
+                    <i class="fas fa-file-alt text-base md:text-lg mb-1 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-[8px] md:text-[9px] font-mono tracking-wider font-bold uppercase">Resume</span>
+                </a>
+                <div class="flex flex-col items-center justify-center text-indigo-400 border-b-2 md:border-b-0 border-indigo-500 pb-1 md:py-1 px-1 md:px-0 bg-indigo-500/5">
+                    <i class="fas fa-paper-plane text-base md:text-lg mb-1"></i>
+                    <span class="text-[8px] md:text-[9px] font-mono tracking-wider font-bold uppercase">Contact</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ================= UTAMA / KONTEN CONTACT FORM ================= -->
+        <main class="theme-main-content flex-1 p-4 sm:p-8 md:p-12 bg-[#0b0f19] min-h-screen min-w-0 transition-all">
+            <div class="max-w-2xl mx-auto flex flex-col justify-between h-full w-full">
+                
+                <div class="w-full">
+                    <!-- TOP BAR -->
+                    <div class="w-full grid grid-cols-2 items-center mb-12 gap-2">
+                        <div class="justify-self-start">
+                            <a href="/?lang={{ ui.current_lang }}" class="flex items-center space-x-1.5 text-[10px] md:text-xs uppercase tracking-wider text-slate-400 hover:text-indigo-400 font-mono font-bold transition-colors cursor-pointer">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>{% if ui.current_lang == 'id' %}Kembali ke Hub{% else %}Back to Hub{% endif %}</span>
+                            </a>
+                        </div>
+
+                        <!-- Kanan: Tema & Bahasa -->
+                        <div class="justify-self-end flex items-center gap-2 md:gap-3">
+                            <button onclick="toggleTheme()" class="theme-btn-box w-7 h-7 md:w-8 md:h-8 bg-slate-800/80 border border-slate-700 text-slate-400 hover:text-indigo-400 rounded-full flex items-center justify-center cursor-pointer transition-all">
+                                <i id="theme-icon" class="fas fa-moon text-[10px] md:text-xs"></i>
+                            </button>
+                            <a href="?lang={{ ui.switch_lang_code }}" class="theme-btn-box p-0.5 md:p-1 bg-slate-800/80 rounded-full border border-slate-700 flex items-center relative w-16 md:w-20 h-7 md:h-8 cursor-pointer select-none group text-[9px] md:text-[10px] font-mono">
+                                <div class="absolute top-0.5 bottom-0.5 md:top-1 md:bottom-1 w-[26px] md:w-[34px] bg-indigo-600 rounded-full transition-all duration-300 shadow-sm flex items-center justify-center z-20 {% if ui.current_lang == 'id' %} left-0.5 md:left-1 {% else %} left-[35px] md:left-[42px] {% endif %}">
+                                    <span class="text-white font-black uppercase text-[8px] md:text-[10px]">{{ ui.current_lang }}</span>
+                                </div>
+                                <span class="w-1/2 text-center font-bold text-slate-500 z-10 transition-colors {% if ui.current_lang == 'id' %} opacity-0 {% endif %}">ID</span>
+                                <span class="w-1/2 text-center font-bold text-slate-500 z-10 transition-colors {% if ui.current_lang == 'en' %} opacity-0 {% endif %}">EN</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- HEADER FORM (Diberi class theme-text-main agar di Light Mode berubah otomatis jadi teks gelap) -->
+                    <div class="mb-8">
+                        <h1 class="font-display text-2xl md:text-3xl font-extrabold tracking-wide uppercase text-white data-[theme=light]:text-slate-900 mb-2 transition-colors dark:text-white class-target-title">{{ ui.title }}</h1>
+                        <p class="text-slate-400 data-[theme=light]:text-slate-600 text-sm md:text-xs leading-relaxed font-sans font-normal transition-colors">{{ ui.subtitle }}</p>
+                    </div>
+
+                    <!-- SEKSI FORM UTAMA (Dioptimalkan border dan background inputnya untuk kedua mode) -->
+                    <div class="theme-bento-box bg-[#0d1321]/30 data-[theme=light]:bg-white rounded-2xl p-5 md:p-6 border border-slate-800/40 data-[theme=light]:border-slate-200 w-full shadow-sm">
+                        <form id="contact-form" onsubmit="submitForm(event)" class="space-y-5 w-full font-sans text-sm">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-mono text-slate-400 data-[theme=light]:text-slate-500 mb-1.5 uppercase font-bold">{{ ui.label_name }}</label>
+                                    <input type="text" name="name" required
+                                           class="w-full bg-[#0b0f19]/60 data-[theme=light]:bg-slate-50 border border-slate-800 data-[theme=light]:border-slate-300 rounded-xl px-4 py-2.5 text-slate-200 data-[theme=light]:text-slate-800 focus:outline-none focus:border-indigo-500 font-sans text-sm transition-colors">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-mono text-slate-400 data-[theme=light]:text-slate-500 mb-1.5 uppercase font-bold">{{ ui.label_email }}</label>
+                                    <input type="email" name="email" required
+       										class="w-full bg-[#0b0f19]/60 data-[theme=light]:bg-slate-50 border border-slate-800 data-[theme=light]:border-slate-300 rounded-xl px-4 py-2.5 text-slate-200 data-[theme=light]:text-slate-800 focus:outline-none focus:border-indigo-500 font-sans text-sm transition-colors">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-mono text-slate-400 data-[theme=light]:text-slate-500 mb-1.5 uppercase font-bold">{{ ui.label_subject }}</label>
+                                <input type="text" name="subject" required
+                                       class="w-full bg-[#0b0f19]/60 data-[theme=light]:bg-slate-50 border border-slate-800 data-[theme=light]:border-slate-300 rounded-xl px-4 py-2.5 text-slate-200 data-[theme=light]:text-slate-800 focus:outline-none focus:border-indigo-500 font-sans text-sm transition-colors">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-mono text-slate-400 data-[theme=light]:text-slate-500 mb-1.5 uppercase font-bold">{{ ui.label_message }}</label>
+                                <textarea name="message" rows="5" required
+                                          class="w-full bg-[#0b0f19]/60 data-[theme=light]:bg-slate-50 border border-slate-800 data-[theme=light]:border-slate-300 rounded-xl px-4 py-2.5 text-slate-200 data-[theme=light]:text-slate-800 focus:outline-none focus:border-indigo-500 font-sans text-sm transition-colors resize-none"></textarea>
+                            </div>
+
+                            <div id="form-status" class="hidden text-xs font-mono p-3 rounded-xl transition-all"></div>
+
+                            <button type="submit" id="submit-btn"
+                                    class="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-all shadow-md flex items-center justify-center space-x-2 cursor-pointer font-display font-bold">
+                                <span>{{ ui.btn_send }}</span>
+                                <i class="fas fa-paper-plane text-xs"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                <!-- FOOTER -->
+                <div class="theme-border-divider w-full pt-6 mt-12 border-t border-slate-800 text-[10px] font-mono text-slate-500 flex justify-between items-center gap-4">
+                    <div>&copy; 2026 Daniel Setiawan</div>
+                    <div class="hidden sm:block shrink-0">All rights reserved.</div>
+                </div>
+
+            </div>
+        </main>
+        
+    </div>
+
+    <!-- LOGIKA JAVASCRIPT AJAX & SWITCHER -->
+    <script>
+        function updateIcon() {
+            const icon = document.getElementById('theme-icon');
+            if (document.documentElement.getAttribute('data-theme') === 'light') { 
+                icon.className = 'fas fa-sun text-[10px] md:text-xs text-amber-500'; 
+            } else { 
+                icon.className = 'fas fa-moon text-[10px] md:text-xs'; 
+            }
+        }
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon();
+        }
+        updateIcon();
+
+        // SUBMIT AJAX WITH FETCH
+        function submitForm(event) {
+            event.preventDefault();
+            const form = document.getElementById('contact-form');
+            const statusDiv = document.getElementById('form-status');
+            const submitBtn = document.getElementById('submit-btn');
+            const formData = new FormData(form);
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>{{ ui.btn_sending }}</span><i class="fas fa-spinner animate-spin text-xs"></i>`;
+
+            fetch('/contact', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json().then(data => ({ status: response.status, body: data })))
+            .then(res => {
+                statusDiv.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-400', 'bg-rose-500/10', 'text-rose-400');
+                statusDiv.classList.add('block');
+                
+                if (res.status === 200) {
+                    statusDiv.classList.add('bg-emerald-500/10', 'text-emerald-400');
+                    statusDiv.innerText = res.body.message;
+                    form.reset();
+                } else {
+                    statusDiv.classList.add('bg-rose-500/10', 'text-rose-400');
+                    statusDiv.innerText = res.body.message;
+                }
+            })
+            .catch(() => {
+                statusDiv.classList.remove('hidden', 'bg-emerald-500/10', 'text-emerald-400');
+                statusDiv.classList.add('block', 'bg-rose-500/10', 'text-rose-400');
+                statusDiv.innerText = "Error network. Try again.";
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>{{ ui.btn_send }}</span><i class="fas fa-paper-plane text-xs"></i>`;
+            });
+        }
+    </script>
+</body>
+</html>

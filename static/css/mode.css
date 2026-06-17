@@ -131,3 +131,63 @@ html[data-theme="light"] .theme-logo {
 html[data-theme="light"] .theme-dot { 
     border-color: #ffffff !important; 
 }
+
+/* Aturan tambahan untuk menjamin teks kontras di Light Mode halaman kontak */
+html[data-theme="light"] .class-target-title {
+    color: #0f172a !important; /* Warna Slate 900 tegap */
+}
+
+html[data-theme="light"] input, 
+html[data-theme="light"] textarea {
+    color: #1e293b !important; /* Memastikan teks ketikan berwarna gelap tebal */
+    background-color: #f8fafc !important; /* Latar belakang input abu-abu sangat bersih */
+}
+
+/* ==========================================================================
+   PERBAIKAN KONTRAS TINGGI LIGHT MODE (Halaman Resume & Kontak)
+   ========================================================================== */
+
+html[data-theme="light"] {
+    /* Koreksi Judul Utama & Sub-Judul Besar */
+    .font-display.text-white,
+    h1.text-white,
+    .theme-title-main,
+    h1, h2, h3, h4 {
+        color: #0f172a !important; /* Slate 900: Sangat gelap & tajam */
+    }
+
+    /* Koreksi Teks Deskripsi / Paragraph Tubuh */
+    .theme-text-body,
+    p.text-slate-400,
+    p.text-slate-300 {
+        color: #334155 !important; /* Slate 700: Abu-abu gelap profesional */
+    }
+
+    /* Koreksi Informasi Kontak Kecil di Bawah Nama */
+    .theme-text-muted,
+    .theme-text-muted span {
+        color: #475569 !important; /* Slate 600 */
+    }
+
+    /* Koreksi Kotak Bento (Bento Cards) & Progress Bar Container */
+    .theme-bento-box {
+        background-color: #ffffff !important;
+        border-color: #e2e8f0 !important; /* Border abu-abu tipis bersih */
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Koreksi Tag Keahlian Kecil (Tech Stack Badges) di Bawah Pekerjaan */
+    .theme-badge,
+    span.bg-slate-800\/50 {
+        background-color: #f1f5f9 !important; /* Latar belakang abu-abu sangat terang */
+        color: #1e293b !important; /* Teks Slate 800 */
+        border-color: #cbd5e1 !important;
+    }
+
+    /* Koreksi Badge Periode Kerja (Tanggal di Sebelah Kanan) */
+    span.bg-slate-800\/80 {
+        background-color: #e2e8f0 !important;
+        color: #334155 !important;
+        border-color: #cbd5e1 !important;
+    }
+}
