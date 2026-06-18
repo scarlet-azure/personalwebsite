@@ -8,10 +8,14 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from dotenv import load_dotenv  # Perbaikan: Hanya mengimpor fungsi yang valid
 
 import smtplib
 from email.mime.text import MIMEText
 import requests
+
+# Muat variabel dari file .env
+load_dotenv()
 
 app = Flask(__name__)
 DB_NAME = "resume.db"
@@ -29,9 +33,11 @@ app.config['SQLALCHEMY_BINDS'] = {
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# 3. INSTANSIASI ELEMEN DB (Setelah Flask membaca konfigurasi di atas)
+# 3. INSTANSIASI ELEMEN DB
 db = SQLAlchemy(app)
-app.config['SECRET_KEY'] = 'bebas-isi-apa-saja-yang-panjang-dan-rahasia-12345'
+
+# Ambil SECRET_KEY dari .env (jika tidak ada, gunakan default fallback yang aman)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-fallback-key-12345')
 
 # Regex standar internasional untuk validasi email
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -42,7 +48,7 @@ def jakarta_now():
 # ================= 1. KONFIGURASI FLASK-LOGIN =================
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'admin_login' # Redirect ke halaman login jika belum autentikasi
+login_manager.login_view = 'admin_login'
 
 # ================= MODEL USER ADMIN DI APP.PY =================
 @login_manager.user_loader
@@ -77,10 +83,8 @@ def admin_login():
 
 # ================= 4. ROUTE DASHBOARD UTAMA (TERPROTEKSI) =================
 
-# 1. MIDDLEWARE: Lacak Kunjungan Halaman Secara Otomatis
 @app.before_request
 def track_page_view():
-    # Hindari melacak aset statis atau rute admin agar data tidak bias
     if not request.path.startswith('/static') and not request.path.startswith('/admin'):
         try:
             view = PageView(
@@ -91,10 +95,9 @@ def track_page_view():
             db.session.add(view)
             db.session.commit()
             
-        except Exception as e:
+        except Exception:
             db.session.rollback()
 
-# 2. ENDPOINT API: Ambil data Klik dari Frontend (AJAX)
 @app.route('/api/track-click', methods=['POST'])
 def track_click():
     data = request.get_json() or {}
@@ -110,11 +113,9 @@ def track_click():
             db.session.rollback()
     return jsonify({"status": "error"}), 400
 
-# 3. ROUTE DASHBOARD ADMIN: Agregasi Data Untuk Grafik Chart.js
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
-    # 1. Tarik Data Pesan dari contact.db & Analytics dari admin.db
     messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
     total_views = PageView.query.count()
     
@@ -132,14 +133,11 @@ def admin_dashboard():
         else:
             device_data["Desktop"] += 1
 
-    # ================= TAMBAHKAN QUERY RESUME DI BAWAH INI =================
     profile = ProfileSection.query.first()
     experiences = Experience.query.order_by(Experience.start_date.desc()).all()
     skills = Skill.query.order_by(Skill.id.desc()).all()
     achievements = Achievement.query.order_by(Achievement.id.desc()).all()
-    # =======================================================================
 
-    # Kirimkan SELURUH variabel tersebut ke dalam satu template dashboard
     return render_template('admin_dashboard.html', 
                            messages=messages, 
                            total_views=total_views, 
@@ -150,20 +148,18 @@ def admin_dashboard():
                            skills=skills,
                            achievements=achievements)
 
-# ================= 5. ROUTE HAPUS PESAN (API AJAX) =================
 @app.route('/admin/message/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_message(id):
-    msg = ContactMessage.query.get_or_400(id)
+    msg = ContactMessage.query.get_or_404(id)
     try:
         db.session.delete(msg)
         db.session.commit()
         return jsonify({"status": "success", "message": "Pesan berhasil dihapus."}), 200
-    except:
+    except Exception:
         db.session.rollback()
         return jsonify({"status": "error", "message": "Gagal menghapus pesan."}), 500
 
-# ================= 6. ROUTE LOGOUT =================
 @app.route('/admin/logout')
 @login_required
 def admin_logout():
@@ -171,7 +167,7 @@ def admin_logout():
     return redirect(url_for('admin_login'))
 
 # =========================================================================
-# DATABASE UTAMA (database.db) - Tanpa bind_key (Default)
+# DATABASE UTAMA (database.db)
 # =========================================================================
 class ProfileSection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -183,10 +179,8 @@ class Experience(db.Model):
     title_id = db.Column(db.String(100), nullable=False)
     title_en = db.Column(db.String(100), nullable=False)
     company = db.Column(db.String(100), nullable=False)
-    
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=True)
-    
     description_id = db.Column(db.Text, nullable=False)
     description_en = db.Column(db.Text, nullable=False)
     tech_stack = db.Column(db.String(200), nullable=False)
@@ -208,10 +202,10 @@ class Achievement(db.Model):
     subtext_en = db.Column(db.String(200), nullable=False)
     
 # =========================================================================
-# DATABASE TERPISAH (admin.db) - Menggunakan bind_key
+# DATABASE TERPISAH (admin.db & contact.db)
 # =========================================================================
 class AdminUser(UserMixin, db.Model):
-    __bind_key__ = 'admin_db' # Tetap di admin.db
+    __bind_key__ = 'admin_db'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
@@ -239,7 +233,7 @@ class ClickLog(db.Model):
     button_name = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, default=jakarta_now)
 
-# ================= ROUTE VIEW CMS EDITOR (REVISI LENGKAP) =================
+# ================= ROUTE VIEW CMS EDITOR =================
 @app.route('/admin/edit-content')
 @login_required
 def admin_edit_content():
@@ -254,7 +248,6 @@ def admin_edit_content():
                            skills=skills, 
                            achievements=achievements)
 
-# ================= 1. GET DATA UNTUK MODAL (AJAX) =================
 @app.route('/admin/get-data/<type>/<id>', methods=['GET'])
 @login_required
 def admin_get_data(type, id):
@@ -268,11 +261,8 @@ def admin_get_data(type, id):
             "title_en": exp.title_en,
             "description_id": exp.description_id,
             "description_en": exp.description_en,
-            
-            # === PERBAIKAN DI SINI: Paksa konversi tanggal menjadi format string YYYY-MM-DD ===
             "start_date": exp.start_date.strftime('%Y-%m-%d') if exp.start_date else "",
             "end_date": exp.end_date.strftime('%Y-%m-%d') if exp.end_date else ""
-            # ================================================================================
         })
         
     elif type == 'skill':
@@ -297,7 +287,7 @@ def admin_get_data(type, id):
         })
         
     return jsonify({"status": "error", "message": "Invalid type"}), 400
-# ================= 2. SAVE SKILL ACTION =================
+
 @app.route('/admin/skill/save', methods=['POST'])
 @login_required
 def save_skill():
@@ -314,7 +304,6 @@ def save_skill():
     db.session.commit()
     return jsonify({"status": "success", "message": "Keahlian berhasil disimpan!"}), 200
 
-# ================= 3. SAVE ACHIEVEMENT/ORG ACTION =================
 @app.route('/admin/achievement/save', methods=['POST'])
 @login_required
 def save_achievement():
@@ -331,7 +320,6 @@ def save_achievement():
     db.session.commit()
     return jsonify({"status": "success", "message": "Prestasi/Organisasi berhasil disimpan!"}), 200
 
-# ================= ACTION: UPDATE BIO =================
 @app.route('/admin/update-bio', methods=['POST'])
 @login_required
 def update_bio():
@@ -345,15 +333,14 @@ def update_bio():
     db.session.commit()
     return jsonify({"status": "success", "message": "Bio berhasil diperbarui!"}), 200
 
-# ================= ACTION: ADD / EDIT EXPERIENCE =================
 @app.route('/admin/experience/save', methods=['POST'])
 @login_required
 def save_experience():
     exp_id = request.form.get('id')
     
-    if exp_id: # Jika ID ada, lakukan update data lama
+    if exp_id:
         exp = Experience.query.get_or_404(exp_id)
-    else: # Jika ID kosong, buat record pengalaman baru
+    else:
         exp = Experience()
         db.session.add(exp)
         
@@ -368,7 +355,7 @@ def save_experience():
     db.session.commit()
     return jsonify({"status": "success", "message": "Data pengalaman kerja disimpan!"}), 200
 
-# Kamus Teks Beranda Utama
+# Kamus Teks Multibahasa
 MULTILINGUAL_DATA = {
     "id": {
         "name": "Daniel Setiawan",
@@ -388,7 +375,6 @@ MULTILINGUAL_DATA = {
     }
 }
 
-# Kamus Teks Resume
 RESUME_TEXTS = {
     "id": {
         "back_hub": "Kembali ke Hub", 
@@ -449,8 +435,6 @@ CONTACT_TEXTS = {
     }
 }
 
-
-             
 @app.route('/')
 def home():
     lang = request.args.get('lang', 'id')
@@ -463,7 +447,6 @@ def home():
     ]
     return render_template('index.html', user=profile_data)
 
-# ================= ROUTE RESUME DENGAN DATA LENGKAP (REVISI) =================
 @app.route('/resume')
 def resume_page():
     lang = request.args.get('lang', 'id')
@@ -476,17 +459,17 @@ def resume_page():
 
     user_data = {"name": "Daniel Setiawan", "current_lang": lang}
 
-    # Urutkan secara kronologis terbalik menggunakan ID desc agar sinkron dengan admin
     experiences = Experience.query.order_by(Experience.id.asc()).all()
     skills = Skill.query.order_by(Skill.id.asc()).all()
     achievements_data = Achievement.query.order_by(Achievement.id.desc()).all()
 
     return render_template('resume.html', ui=ui, user=user_data, experiences=experiences, skills=skills, achievements=achievements_data)
 
+
+# ================= INJEKSI VARIABEL AMAN UNTUK EMAIL NOTIFIKASI =================
 def send_email_notification(name, email, subject, message):
-    # Gunakan kredensial aman (disarankan simpan di OS Environment variables)
-    SENDER_EMAIL = "danielsetiawan22@gmail.com"
-    SENDER_PASSWORD = "etmz dzfz jewf mrsy" 
+    SENDER_EMAIL = os.getenv('SENDER_EMAIL')
+    SENDER_PASSWORD = os.getenv('SENDER_PASSWORD') 
     RECEIVER_EMAIL = "hello@danielsetiawan.com"
 
     msg = MIMEText(f"Nama Pengirim: {name}\nEmail: {email}\n\nPesan:\n{message}")
@@ -498,15 +481,15 @@ def send_email_notification(name, email, subject, message):
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.sendmail(SENDER_EMAIL, [RECEIVER_EMAIL], msg.as_string())
+        print("Notifikasi email berhasil dikirim!")
     except Exception as e:
         print(f"Gagal mengirim notifikasi email: {e}")
    
 # =========================================================================
-# ROUTE CONTACT FORM & SUBMISSION
+# ROUTE CONTACT FORM & SUBMISSION (MENGGUNAKAN ENVIRONMENT VARIABLES)
 # =========================================================================
 @app.route('/contact', methods=['GET'])
 def contact_page():
-    # Mengatur bahasa aktif untuk tampilan halaman HTML
     lang = request.args.get('lang', 'id')
     if lang not in ['id', 'en']:
         lang = 'id'
@@ -517,15 +500,14 @@ def contact_page():
 
 @app.route('/contact/submit', methods=['POST'])
 def contact_submit():
-    # Ambil bahasa aktif dari parameter referer atau default ke 'id'
     lang = request.args.get('lang', 'id')
     if lang not in ['id', 'en']:
         lang = 'id'
 
-    # 1. VALIDASI CLOUDFLARE TURNSTILE (ANTI-BOT)
+    # 1. VALIDASI CLOUDFLARE TURNSTILE (Menggunakan variabel lingkungan)
     turnstile_response = request.form.get('cf-turnstile-response')
     payload = {
-        'secret': '0x4AAAAAADnBgPJ1pYR1xBHDcWVBzwm2ut0', # Secret Key Panjang
+        'secret': os.getenv('TURNSTILE_SECRET'), 
         'response': turnstile_response
     }
     try:
@@ -553,7 +535,7 @@ def contact_submit():
         invalid_msg = "Format alamat email tidak valid!" if lang == 'id' else "Invalid email address format!"
         return jsonify({"status": "error", "message": invalid_msg}), 400
 
-    # 5. TERUSKAN SIMPAN KE DATABASE (contact.db) & KIRIM NOTIFIKASI EMAIL
+    # 5. TERUSKAN SIMPAN KE DATABASE & KIRIM NOTIFIKASI EMAIL
     try:
         waktu_jakarta = jakarta_now()
         new_msg = ContactMessage(
@@ -561,12 +543,12 @@ def contact_submit():
             email=email.strip().lower(),
             subject=subject,
             message=message,
-            created_at=waktu_jakarta # Waktu WIB murni
+            created_at=waktu_jakarta
         )
         db.session.add(new_msg)
         db.session.commit()
 
-        # Pemicu notifikasi email otomatis ke kotak masuk Anda
+        # Pemicu fungsi notifikasi aman
         send_email_notification(name, email.strip().lower(), subject, message)
         
         succ_msg = "Pesan Anda berhasil dikirim!" if lang == 'id' else "Your message has been sent successfully!"
@@ -582,7 +564,6 @@ def robots():
 
 @app.route('/sitemap.xml')
 def sitemap():
-    # Peta situs sederhana untuk mengarahkan Google Bot ke halaman utama dan resume
     xml = """<?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
         <url><loc>https://www.danielsetiawan.com/</loc><priority>1.0</priority></url>

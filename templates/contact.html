@@ -186,7 +186,7 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<span>{{ ui.btn_sending }}</span><i class="fas fa-spinner animate-spin text-xs"></i>`;
 
-            fetch('/contact/submit', {
+            fetch(`/contact/submit?lang=${new URLSearchParams(window.location.search).get('lang') || 'id'}`, {
                 method: 'POST',
                 body: formData
             })
