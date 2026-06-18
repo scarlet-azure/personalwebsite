@@ -31,7 +31,9 @@
   	<link rel="alternate" hreflang="id" href="{{ request.base_url }}?lang=id" />
     <link rel="alternate" hreflang="en" href="{{ request.base_url }}?lang=en" />
     <link rel="alternate" hreflang="x-default" href="{{ request.base_url }}?lang=id" />
-  
+
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
     <script>
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
@@ -128,6 +130,10 @@
                                 <textarea name="message" rows="5" required
                                           class="w-full bg-[#0b0f19]/60 data-[theme=light]:bg-slate-50 border border-slate-800 data-[theme=light]:border-slate-300 rounded-xl px-4 py-2.5 text-slate-200 data-[theme=light]:text-slate-800 focus:outline-none focus:border-indigo-500 font-sans text-sm transition-colors resize-none"></textarea>
                             </div>
+                            
+                            <!-- <div class="flex justify-start mb-2">
+                                <div class="cf-turnstile" data-sitekey="0x4AAAAAADnBgPJ1pYR1xBHDcWVBzwm2ut0" data-theme="dark"></div>
+                            </div> -->
 
                             <div id="form-status" class="hidden text-xs font-mono p-3 rounded-xl transition-all"></div>
 
@@ -169,7 +175,7 @@
         }
         updateIcon();
 
-        // SUBMIT AJAX WITH FETCH
+        // SUBMIT AJAX WITH FETCH (PERBAIKAN URL ENDPOINT)
         function submitForm(event) {
             event.preventDefault();
             const form = document.getElementById('contact-form');
@@ -180,7 +186,8 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<span>{{ ui.btn_sending }}</span><i class="fas fa-spinner animate-spin text-xs"></i>`;
 
-            fetch('/contact', {
+            // UBAH '/contact' MENJADI '/contact/submit' AGAR MASUK KE BINDING CONTACT.DB
+            fetch('/contact/submit', {
                 method: 'POST',
                 body: formData
             })

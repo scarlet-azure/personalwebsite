@@ -94,10 +94,30 @@
 
                         <!-- Tengah: SOSMED CENTER -->
                         <div class="justify-self-center flex items-center space-x-4 md:space-x-5 text-slate-400">
-                            <a href="https://facebook.com/" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition-colors text-xs md:text-sm"><i class="fab fa-facebook-f"></i></a>
-                            <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition-colors text-xs md:text-sm"><i class="fab fa-instagram"></i></a>
-                            <a href="https://github.com/danielsetiawan22" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition-colors text-xs md:text-sm"><i class="fab fa-github"></i></a>
-                            <a href="mailto:hello@danielsetiawan.id" class="hover:text-indigo-400 transition-colors text-xs md:text-sm"><i class="fas fa-envelope"></i></a>
+                            <!-- Facebook Tracker -->
+                            <a href="https://facebook.com/danielsetiawan22" onclick="trackExternalClick('facebook')" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition-colors text-xs md:text-sm">
+                                <i class="fab fa-facebook-f"></i>
+                            </a>
+                            
+                            <!-- Instagram Tracker -->
+                            <a href="https://instagram.com/_danielstwn" onclick="trackExternalClick('instagram')" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition-colors text-xs md:text-sm">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                            
+                            <!-- GitHub Tracker -->
+                            <a href="https://github.com/scarlet-azure" onclick="trackExternalClick('github')" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition-colors text-xs md:text-sm">
+                                <i class="fab fa-github"></i>
+                            </a>
+                            
+                            <!-- LinkedIn Tracker (Baru) -->
+                            <a href="https://linkedin.com/in/danielsetiawan22" onclick="trackExternalClick('linkedin')" target="_blank" rel="noopener noreferrer" class="hover:text-indigo-400 transition-colors text-xs md:text-sm">
+                                <i class="fab fa-linkedin-in"></i>
+                            </a>
+                            
+                            <!-- Email Tracker -->
+                            <a href="https://mailto:hello@danielsetiawan.com" onclick="trackExternalClick('email')" class="hover:text-indigo-400 transition-colors text-xs md:text-sm">
+                                <i class="fas fa-envelope"></i>
+                            </a>
                         </div>
 
                         <!-- Kanan: Tema & Bahasa -->
@@ -125,9 +145,9 @@
                         <h1 class="font-display text-2xl md:text-3xl font-extrabold tracking-wide uppercase text-white mb-2 transition-colors break-words">{{ user.name }}</h1>
                         <p class="text-indigo-400 font-mono tracking-widest text-[11px] md:text-xs uppercase font-bold mb-4 md:mb-6 transition-colors">DIGITAL PRODUCTION & WEB DEVELOPER</p>
                         <div class="theme-text-muted flex flex-col sm:flex-row flex-wrap justify-center items-center gap-3 sm:gap-6 text-sm md:text-xs text-slate-400 font-mono transition-colors w-full">
-                            <span class="flex items-center gap-2"><i class="fas fa-envelope text-indigo-400"></i> hello@danielsetiawan.id</span>
+                            <span class="flex items-center gap-2"><i class="fas fa-envelope text-indigo-400"></i> hello@danielsetiawan.com</span>
                             <span class="flex items-center gap-2"><i class="fas fa-map-marker-alt text-indigo-400"></i> Jakarta, Indonesia</span>
-                            <span class="flex items-center gap-2"><i class="fas fa-globe text-indigo-400"></i> www.danielsetiawan.id</span>
+                            <span class="flex items-center gap-2"><i class="fas fa-globe text-indigo-400"></i> www.danielsetiawan.com</span>
                         </div>
                     </div>
 
@@ -159,7 +179,19 @@
                                             <h3 class="font-display text-base md:text-sm font-bold text-white group-hover:text-indigo-400 transition-colors break-words">{{ exp.title_id if ui.current_lang == 'id' else exp.title_en }}</h3>
                                             <p class="text-xs sm:text-sm md:text-xs text-indigo-400 font-mono mt-0.5 break-words">{{ exp.company }}</p>
                                         </div>
-                                        <span class="text-[10px] md:text-[9px] font-mono font-bold uppercase bg-slate-800/80 border border-slate-700/30 text-slate-400 px-2 py-0.5 rounded shrink-0 w-max self-start">{{ exp.period }}</span>
+                                        <span class="text-[10px] md:text-[9px] font-mono font-bold uppercase bg-slate-800/80 border border-slate-700/30 text-slate-400 px-2 py-0.5 rounded shrink-0 w-max self-start">
+                                            <!-- Format Tanggal Mulai (cth: Feb 2023) -->
+                                            {{ exp.start_date.strftime('%b %Y') }} 
+                                            
+                                            - 
+                                            
+                                            <!-- Cek Kondisi Tanggal Selesai -->
+                                            {% if exp.end_date %}
+                                                {{ exp.end_date.strftime('%b %Y') }}
+                                            {% else %}
+                                                Present
+                                            {% endif %}
+                                        </span>
                                     </div>
                                     <p class="text-slate-400 text-sm md:text-xs leading-relaxed mb-3 transition-colors whitespace-pre-wrap break-words">{{ exp.description_id if ui.current_lang == 'id' else exp.description_en }}</p>
                                     <div class="flex flex-wrap gap-1.5 w-full">
@@ -295,6 +327,14 @@
         };
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function trackExternalClick(buttonName) {
+            fetch('/api/track-click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ button: buttonName })
+            }).catch(err => console.log("Tracking error ignored"));
         }
     </script>
 </body>

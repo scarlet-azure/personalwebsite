@@ -1,33 +1,50 @@
+import os
 import sqlite3
 import re
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+import smtplib
+from email.mime.text import MIMEText
+import requests
 
 app = Flask(__name__)
 DB_NAME = "resume.db"
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+# 1. SETUP PATH DIREKTORI INSTANCE
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
+
+# 2. DEFINISIKAN SEMUA CONFIG URI & BINDS (WAJIB SEBELUM INSTANSIASI DB)
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(INSTANCE_DIR, 'database.db')}"
+
+app.config['SQLALCHEMY_BINDS'] = {
+    'admin_db': f"sqlite:///{os.path.join(INSTANCE_DIR, 'admin.db')}",
+    'contact_db': f"sqlite:///{os.path.join(INSTANCE_DIR, 'contact.db')}"
+}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'surya-abadi-printing-app-key-2026-super-secret!'
+
+# 3. INSTANSIASI ELEMEN DB (Setelah Flask membaca konfigurasi di atas)
 db = SQLAlchemy(app)
+app.config['SECRET_KEY'] = 'bebas-isi-apa-saja-yang-panjang-dan-rahasia-12345'
 
 # Regex standar internasional untuk validasi email
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+def jakarta_now():
+    return datetime.now(ZoneInfo("Asia/Jakarta")).replace(tzinfo=None)
 
 # ================= 1. KONFIGURASI FLASK-LOGIN =================
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'admin_login' # Redirect ke halaman login jika belum autentikasi
 
-# ================= 2. MODEL USER ADMIN =================
-class AdminUser(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-
+# ================= MODEL USER ADMIN DI APP.PY =================
 @login_manager.user_loader
 def load_user(user_id):
     return AdminUser.query.get(int(user_id))
@@ -59,12 +76,79 @@ def admin_login():
     return render_template('admin_login.html')
 
 # ================= 4. ROUTE DASHBOARD UTAMA (TERPROTEKSI) =================
+
+# 1. MIDDLEWARE: Lacak Kunjungan Halaman Secara Otomatis
+@app.before_request
+def track_page_view():
+    # Hindari melacak aset statis atau rute admin agar data tidak bias
+    if not request.path.startswith('/static') and not request.path.startswith('/admin'):
+        try:
+            view = PageView(
+                page_url=request.path,
+                user_agent=request.user_agent.string,
+                ip_address=request.remote_addr
+            )
+            db.session.add(view)
+            db.session.commit()
+            
+        except Exception as e:
+            db.session.rollback()
+
+# 2. ENDPOINT API: Ambil data Klik dari Frontend (AJAX)
+@app.route('/api/track-click', methods=['POST'])
+def track_click():
+    data = request.get_json() or {}
+    button = data.get('button')
+
+    if button in ['facebook', 'instagram', 'github', 'email', 'linkedin']:
+        try:
+            log = ClickLog(button_name=button)
+            db.session.add(log)
+            db.session.commit()
+            return jsonify({"status": "success"}), 200
+        except Exception:
+            db.session.rollback()
+    return jsonify({"status": "error"}), 400
+
+# 3. ROUTE DASHBOARD ADMIN: Agregasi Data Untuk Grafik Chart.js
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
-    # Tarik semua pesan dari database, urutkan dari yang terbaru
+    # 1. Tarik Data Pesan dari contact.db & Analytics dari admin.db
     messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
-    return render_template('admin_dashboard.html', messages=messages)
+    total_views = PageView.query.count()
+    
+    click_stats = db.session.query(
+        ClickLog.button_name, func.count(ClickLog.id)
+    ).group_by(ClickLog.button_name).all()
+    clicks_data = {item[0]: item[1] for item in click_stats}
+    
+    views_raw = PageView.query.all()
+    device_data = {"Mobile": 0, "Desktop": 0}
+    for v in views_raw:
+        ua = v.user_agent.lower() if v.user_agent else ""
+        if "mobile" in ua or "android" in ua or "iphone" in ua:
+            device_data["Mobile"] += 1
+        else:
+            device_data["Desktop"] += 1
+
+    # ================= TAMBAHKAN QUERY RESUME DI BAWAH INI =================
+    profile = ProfileSection.query.first()
+    experiences = Experience.query.order_by(Experience.start_date.desc()).all()
+    skills = Skill.query.order_by(Skill.id.desc()).all()
+    achievements = Achievement.query.order_by(Achievement.id.desc()).all()
+    # =======================================================================
+
+    # Kirimkan SELURUH variabel tersebut ke dalam satu template dashboard
+    return render_template('admin_dashboard.html', 
+                           messages=messages, 
+                           total_views=total_views, 
+                           clicks_data=clicks_data, 
+                           device_data=device_data,
+                           profile=profile,
+                           experiences=experiences,
+                           skills=skills,
+                           achievements=achievements)
 
 # ================= 5. ROUTE HAPUS PESAN (API AJAX) =================
 @app.route('/admin/message/delete/<int:id>', methods=['POST'])
@@ -86,69 +170,203 @@ def admin_logout():
     logout_user()
     return redirect(url_for('admin_login'))
 
-with app.app_context():
-    db.create_all()  # Ini memastikan tabel contact_message otomatis dibuat jika belum ad
+# =========================================================================
+# DATABASE UTAMA (database.db) - Tanpa bind_key (Default)
+# =========================================================================
+class ProfileSection(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    bio_id = db.Column(db.Text, nullable=False)
+    bio_en = db.Column(db.Text, nullable=False)
 
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+class Experience(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title_id = db.Column(db.String(100), nullable=False)
+    title_en = db.Column(db.String(100), nullable=False)
+    company = db.Column(db.String(100), nullable=False)
     
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS experiences (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category TEXT, title_id TEXT, title_en TEXT,
-            company TEXT, period TEXT, description_id TEXT, description_en TEXT, tech_stack TEXT
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS skills (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT,
-            name_id TEXT, name_en TEXT, level_id TEXT, level_en TEXT
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS achievements (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type TEXT, text_id TEXT, text_en TEXT, subtext_id TEXT, subtext_en TEXT
-        )
-    ''')
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)
     
-    cursor.execute("DELETE FROM experiences")
-    cursor.execute("DELETE FROM skills")
-    cursor.execute("DELETE FROM achievements")
-    
-    work_exp = [
-        ('printing', 'General Manager', 'General Manager', 'Surya Abadi Printing', 'Feb 2023 - Present', 'Memimpin inisiatif pertumbuhan bisnis dan strategi operasional. Mengelola anggaran tahunan sebesar Rp 2 Miliar, berhasil memotong biaya 15% serta menaikkan pendapatan 20%. Membangun sistem penjadwalan yang mengurangi komplain kualitas sebesar 25% dan menaikkan efisiensi operasional 20%. Mengoordinasikan 15 supplier untuk memastikan 98% on-time delivery. Menjaga retensi pelanggan hingga meningkat 15% dengan tingkat kepuasan 95% untuk klien strategis seperti Suzuki, Toyota Accessories, Solar Gard, Sandei Blinds, JP Helmet, KYT & INK, NHK, GM, MAZ, VOG.', 'Spearheaded business growth initiatives, developed operational strategies, and oversaw end-to-end operations. Successfully managed Rp 2 billion annual budgets, reducing expenses by 15% while increasing revenue by 20%. Established a scheduling system to reduce quality conflicts by 25%, boosting operational efficiency by 20%. Coordinated with 15 suppliers to ensure 98% on-time delivery. Maintained strategic client relationships, resulting in a 15% increase in customer retention and 95% satisfaction rate for key clients (Suzuki, Toyota Accessories, Solar Gard, Sandei Blinds, JP Helmet, KYT & INK, NHK, GM, MAZ, VOG).', 'Operations Management, Strategic Procurement, Cost-Saving, Team Leadership, Budgeting'),
-        ('printing', 'Manajer Operasional', 'Operations Manager', 'Surya Abadi Printing', 'Feb 2019 - Jan 2023', 'Mengarahkan operasional harian perusahaan meliputi perencanaan produksi, kontrol kualitas (QC), manajemen inventaris, dan alokasi sumber daya. Berhasil mengidentifikasi inefisiensi operasional dan menyarankan langkah korektif yang memotong biaya sebesar 10%. Menegosiasikan kontrak menguntungkan dengan supplier, mengoptimalkan proses pengadaan, dan berhasil mengurangi lead time sebesar 15% untuk penanganan klien utama.', 'Directed day-to-day operations, including production planning, quality control, inventory management, and resource allocation. Established and maintained rigorous quality control processes. Identified operational inefficiencies and suggested corrective measures that resulted in a 10% cost reduction. Negotiated favorable contracts with suppliers, optimized procurement processes, and reduced lead times by 15%.', 'Production Planning, Quality Control, Inventory Management, Supplier Negotiation, Lead Time Reduction'),
-        ('printing', 'Analis Operasional', 'Operations Analyst', 'Surya Abadi Printing', 'Dec 2016 - Jan 2019', 'Menganalisis data operasional dan dinamika rantai pasok untuk mengidentifikasi inefisiensi. Mengimplementasikan perbaikan proses yang menghasilkan penurunan biaya sebesar 10% dan pengurangan lead time sebesar 5%. Memproduksi 20 laporan operasional berbasis data untuk memandu pengambilan keputusan strategis. Menangani akuisisi klien penting seperti Kue Lily, Heisz Medical, Corner Kebab, AmerthaGracia, McDonalds, dan Vendor Kotak Katering Pre-Asian Games 2018.', 'Analyzed operational data, identifying inefficiencies, and providing data-driven recommendations. Analyzed supply chain dynamics and optimized procurement strategies. Implemented process improvements leading to a 10% cost reduction and 5% reduction in lead times. Produced 20 data-based operational reports. Handled notable client acquisition (Kue Lily, Heisz Medical, Corner Kebab, AmerthaGracia, McDonalds, Pre-Asian Games 2018 Catering Box Vendor).', 'Data Analysis, Supply Chain Optimization, Process Improvement, Operational Reporting'),
-        ('web', 'Frontend Web Developer', 'Frontend Web Developer', 'UNIXON BRANDING', 'Jan 2014 - Nov 2016', 'Merencanakan, membuat kode, mendesain, dan menyusun tata letak situs web sesuai kebutuhan klien. Berhasil mengembangkan, memperluas, dan memperbaiki lebih dari 30 situs web untuk UMKM dengan memanfaatkan teknologi HTML, CSS, JavaScript, MySQL, dan Bootstrap, serta memimpin pengujian responsivitas dan kompatibilitas lintas browser.', 'Planned, coded, designed, and laid out websites to fulfill client requirements. Developed, expanded, and rectified over 30 websites for SMEs, employing HTML, CSS, JavaScript, MySQL, and Bootstrap technologies. Supervised procedures for cross-browser compatibility and responsiveness testing.', 'HTML5, CSS3, JavaScript, Bootstrap, MySQL, Cross-Browser Testing'),
-        ('education', 'Mentor Data Analytics', 'Data Analytics Mentor', 'Bitlabs Academy', 'Apr 2024 - Dec 2024', 'Dipercaya sebagai Mentor Data Analytics untuk program Data Analytics for Business 2024 Kampus Merdeka Batch 7. Membimbing individu serta tim dalam peningkatan keahlian analisis, mengelola program pelatihan, dan memberikan dukungan teknis pemecahan masalah data aplikasi bisnis.', 'Appointed as a Mentor of Data Analytics for Business 2024 Kampus Merdeka Batch 7. Mentored individuals and teams in data analysis, emphasizing skill enhancement. Managed training programs to ensure comprehension of fundamental and advanced data analysis concepts.', 'Data Analysis, Business Data Applications, Training & Mentoring')
-    ]
-    cursor.executemany("INSERT INTO experiences (category, title_id, title_en, company, period, description_id, description_en, tech_stack) VALUES (?,?,?,?,?,?,?,?)", work_exp)
-    
-    skills_list = [
-        ('tech', 'Product Management', 'Product Management', 'Ahli', 'Expert'),
-        ('tech', 'Digital Marketing', 'Digital Marketing', 'Lanjutan', 'Advanced'),
-        ('tech', 'R Programming', 'R Programming', 'Menengah', 'Intermediate'),
-        ('tech', 'HTML / CSS / JS', 'HTML / CSS / JS', 'Ahli', 'Expert'),
-        ('prod', 'Cetak Stiker Vinyl Statis', 'Specialized Static Vinyl Sticker Printing', 'Ahli', 'Expert'),
-        ('prod', 'Analisis Data & KPI', 'Data Analytics & KPI Management', 'Ahli', 'Expert')
-    ]
-    cursor.executemany("INSERT INTO skills (category, name_id, name_en, level_id, level_en) VALUES (?,?,?,?,?)", skills_list)
+    description_id = db.Column(db.Text, nullable=False)
+    description_en = db.Column(db.Text, nullable=False)
+    tech_stack = db.Column(db.String(200), nullable=False)
 
-    achievements_list = [
-        ('org', 'Ketua Komite 100% Efficiency, KPI & Awarding', '100% Efficiency, KPI & Awarding Committee Chairperson', 'JCI Indonesia', 'JCI Indonesia'),
-        ('award', 'Juara Tingkat Nasional Teras Usaha Mahasiswa', 'Teras Usaha Mahasiswa National Champion', 'Bank BRI', 'National Champion'),
-        ('award', 'Pemenang Regional Teras Usaha Mahasiswa - Jakarta', 'Teras Usaha Mahasiswa Regional Winner - Jakarta', 'Bank BRI', 'Regional Winner'),
-        ('award', 'Juara Dua DBS BIG Competition', 'DBS BIG Competition Runner Up Champion', 'DBS Bank', 'Runner Up Champion'),
-        ('award', 'Lulusan dengan Predikat Magna Cum Laude', 'Magna Cum Laude Graduate', 'Universitas Prasetiya Mulya', 'Academic Honors'),
-        ('pub', 'Studi Kelayakan Usaha Percetakan Mandiri: Copycino Business Project', 'Studi Kelayakan Usaha Percetakan Mandiri: Copycino Business Project', 'Publikasi Internal / Proyek', 'Business Project Publication'),
-        ('cert', 'Analisis Data dengan Pemrograman R', 'Data Analysis with R Programming', 'Sertifikasi Kompetensi', 'Professional Certification')
-    ]
-    cursor.executemany("INSERT INTO achievements (type, text_id, text_en, subtext_id, subtext_en) VALUES (?,?,?,?,?)", achievements_list)
+class Skill(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(50), nullable=True)
+    name_id = db.Column(db.String(100), nullable=False)
+    name_en = db.Column(db.String(100), nullable=False)
+    level_id = db.Column(db.String(50), nullable=False)
+    level_en = db.Column(db.String(50), nullable=False)
+
+class Achievement(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.String(50), nullable=False)
+    text_id = db.Column(db.String(200), nullable=False)
+    text_en = db.Column(db.String(200), nullable=False)
+    subtext_id = db.Column(db.String(200), nullable=False)
+    subtext_en = db.Column(db.String(200), nullable=False)
     
-    conn.commit()
-    conn.close()
+# =========================================================================
+# DATABASE TERPISAH (admin.db) - Menggunakan bind_key
+# =========================================================================
+class AdminUser(UserMixin, db.Model):
+    __bind_key__ = 'admin_db' # Tetap di admin.db
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+
+class ContactMessage(db.Model):
+    __bind_key__ = 'contact_db'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    subject = db.Column(db.String(150), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False)
+    
+class PageView(db.Model):
+    __bind_key__ = 'admin_db'
+    id = db.Column(db.Integer, primary_key=True)
+    page_url = db.Column(db.String(100), nullable=False)
+    user_agent = db.Column(db.String(255))
+    ip_address = db.Column(db.String(50))
+    timestamp = db.Column(db.DateTime, default=jakarta_now)
+
+class ClickLog(db.Model):
+    __bind_key__ = 'admin_db'
+    id = db.Column(db.Integer, primary_key=True)
+    button_name = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.DateTime, default=jakarta_now)
+
+# ================= ROUTE VIEW CMS EDITOR (REVISI LENGKAP) =================
+@app.route('/admin/edit-content')
+@login_required
+def admin_edit_content():
+    profile = ProfileSection.query.first() or ProfileSection(bio_id="", bio_en="")
+    experiences = Experience.query.order_by(Experience.start_date.desc()).all()
+    skills = Skill.query.order_by(Skill.id.desc()).all()
+    achievements = Achievement.query.order_by(Achievement.id.desc()).all()
+    
+    return render_template('admin_edit.html', 
+                           profile=profile, 
+                           experiences=experiences, 
+                           skills=skills, 
+                           achievements=achievements)
+
+# ================= 1. GET DATA UNTUK MODAL (AJAX) =================
+@app.route('/admin/get-data/<type>/<id>', methods=['GET'])
+@login_required
+def admin_get_data(type, id):
+    if type == 'experience':
+        exp = Experience.query.get_or_404(id)
+        return jsonify({
+            "id": exp.id,
+            "company": exp.company,
+            "tech_stack": exp.tech_stack,
+            "title_id": exp.title_id,
+            "title_en": exp.title_en,
+            "description_id": exp.description_id,
+            "description_en": exp.description_en,
+            
+            # === PERBAIKAN DI SINI: Paksa konversi tanggal menjadi format string YYYY-MM-DD ===
+            "start_date": exp.start_date.strftime('%Y-%m-%d') if exp.start_date else "",
+            "end_date": exp.end_date.strftime('%Y-%m-%d') if exp.end_date else ""
+            # ================================================================================
+        })
+        
+    elif type == 'skill':
+        sk = Skill.query.get_or_404(id)
+        return jsonify({
+            "id": sk.id,
+            "category": sk.category,
+            "name_id": sk.name_id,
+            "level_id": sk.level_id,
+            "level_en": sk.level_en
+        })
+        
+    elif type == 'achievement':
+        ac = Achievement.query.get_or_404(id)
+        return jsonify({
+            "id": ac.id,
+            "type": ac.type,
+            "text_id": ac.text_id,
+            "text_en": ac.text_en,
+            "subtext_id": ac.subtext_id,
+            "subtext_en": ac.subtext_en
+        })
+        
+    return jsonify({"status": "error", "message": "Invalid type"}), 400
+# ================= 2. SAVE SKILL ACTION =================
+@app.route('/admin/skill/save', methods=['POST'])
+@login_required
+def save_skill():
+    skill_id = request.form.get('id')
+    skill = Skill.query.get(skill_id) if skill_id else Skill()
+    if not skill_id: db.session.add(skill)
+    
+    skill.category = request.form.get('category')
+    skill.name_id = request.form.get('name_id')
+    skill.name_en = request.form.get('name_en')
+    skill.level_id = request.form.get('level_id')
+    skill.level_en = request.form.get('level_en')
+    
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Keahlian berhasil disimpan!"}), 200
+
+# ================= 3. SAVE ACHIEVEMENT/ORG ACTION =================
+@app.route('/admin/achievement/save', methods=['POST'])
+@login_required
+def save_achievement():
+    ach_id = request.form.get('id')
+    ach = Achievement.query.get(ach_id) if ach_id else Achievement()
+    if not ach_id: db.session.add(ach)
+    
+    ach.type = request.form.get('type')
+    ach.text_id = request.form.get('text_id')
+    ach.text_en = request.form.get('text_en')
+    ach.subtext_id = request.form.get('subtext_id')
+    ach.subtext_en = request.form.get('subtext_en')
+    
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Prestasi/Organisasi berhasil disimpan!"}), 200
+
+# ================= ACTION: UPDATE BIO =================
+@app.route('/admin/update-bio', methods=['POST'])
+@login_required
+def update_bio():
+    profile = ProfileSection.query.first()
+    if not profile:
+        profile = ProfileSection()
+        db.session.add(profile)
+        
+    profile.bio_id = request.form.get('bio_id')
+    profile.bio_en = request.form.get('bio_en')
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Bio berhasil diperbarui!"}), 200
+
+# ================= ACTION: ADD / EDIT EXPERIENCE =================
+@app.route('/admin/experience/save', methods=['POST'])
+@login_required
+def save_experience():
+    exp_id = request.form.get('id')
+    
+    if exp_id: # Jika ID ada, lakukan update data lama
+        exp = Experience.query.get_or_404(exp_id)
+    else: # Jika ID kosong, buat record pengalaman baru
+        exp = Experience()
+        db.session.add(exp)
+        
+    exp.title_id = request.form.get('title_id')
+    exp.title_en = request.form.get('title_en')
+    exp.company = request.form.get('company')
+    exp.period = request.form.get('period')
+    exp.description_id = request.form.get('description_id')
+    exp.description_en = request.form.get('description_en')
+    exp.tech_stack = request.form.get('tech_stack')
+    
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Data pengalaman kerja disimpan!"}), 200
 
 # Kamus Teks Beranda Utama
 MULTILINGUAL_DATA = {
@@ -231,13 +449,7 @@ CONTACT_TEXTS = {
     }
 }
 
-class ContactMessage(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
-    subject = db.Column(db.String(200), nullable=False)
-    message = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
              
 @app.route('/')
 def home():
@@ -251,26 +463,44 @@ def home():
     ]
     return render_template('index.html', user=profile_data)
 
+# ================= ROUTE RESUME DENGAN DATA LENGKAP (REVISI) =================
 @app.route('/resume')
-def resume():
+def resume_page():
     lang = request.args.get('lang', 'id')
-    if lang not in RESUME_TEXTS: lang = 'id'
-    ui_text = RESUME_TEXTS[lang]
-    
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM experiences ORDER BY id ASC")
-    experiences = cursor.fetchall()
-    cursor.execute("SELECT * FROM skills")
-    skills = cursor.fetchall()
-    cursor.execute("SELECT * FROM achievements ORDER BY id ASC")
-    achievements = cursor.fetchall()
-    conn.close()
-    
-    user_data = {"name": "Daniel Setiawan"}
-    return render_template('resume.html', experiences=experiences, skills=skills, achievements=achievements, ui=ui_text, user=user_data)
-    
+    if lang not in ['id', 'en']: lang = 'id'
+    ui = RESUME_TEXTS[lang]
+
+    profile_db = ProfileSection.query.first()
+    if profile_db:
+        ui['bio'] = profile_db.bio_id if lang == 'id' else profile_db.bio_en
+
+    user_data = {"name": "Daniel Setiawan", "current_lang": lang}
+
+    # Urutkan secara kronologis terbalik menggunakan ID desc agar sinkron dengan admin
+    experiences = Experience.query.order_by(Experience.id.asc()).all()
+    skills = Skill.query.order_by(Skill.id.asc()).all()
+    achievements_data = Achievement.query.order_by(Achievement.id.desc()).all()
+
+    return render_template('resume.html', ui=ui, user=user_data, experiences=experiences, skills=skills, achievements=achievements_data)
+
+def send_email_notification(name, email, subject, message):
+    # Gunakan kredensial aman (disarankan simpan di OS Environment variables)
+    SENDER_EMAIL = "danielsetiawan22@gmail.com"
+    SENDER_PASSWORD = "etmz dzfz jewf mrsy" 
+    RECEIVER_EMAIL = "hello@danielsetiawan.com"
+
+    msg = MIMEText(f"Nama Pengirim: {name}\nEmail: {email}\n\nPesan:\n{message}")
+    msg['Subject'] = f"[PORTFOLIO INBOX] {subject}"
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = RECEIVER_EMAIL
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.sendmail(SENDER_EMAIL, [RECEIVER_EMAIL], msg.as_string())
+    except Exception as e:
+        print(f"Gagal mengirim notifikasi email: {e}")
+   
 @app.route('/contact', methods=['GET', 'POST'])
 def contact_page():
     # Mengatur bahasa aktif
@@ -314,6 +544,44 @@ def contact_page():
             return jsonify({"status": "error", "message": "Database error"}), 500
 
     return render_template('contact.html', ui=ui)
+
+@app.route('/contact/submit', methods=['POST'])
+def contact_submit():
+    # Ambil token turnstile dari form
+    turnstile_response = request.form.get('cf-turnstile-response')
+    
+    # ==================== MATIKAN VALIDASI TURNSTILE SEMENTARA ====================
+    # COMMENT ATAU MATIKAN BLOK INI:
+    # payload = {
+    #     'secret': 'SECRET_KEY_ANDA',
+    #     'response': turnstile_response
+    # }
+    # verify_response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=payload)
+    # outcome = verify_response.json()
+    # if not outcome.get('success'):
+    #     return jsonify({"status": "error", "message": "Validasi keamanan anti-bot gagal!"}), 400
+    # ==============================================================================
+    
+    # Ambil data form seperti biasa
+    name = request.form.get('name')
+    email = request.form.get('email')
+    subject = request.form.get('subject')
+    msg_text = request.form.get('message')
+    
+    # Simpan ke database dengan waktu Jakarta (WIB)
+    waktu_jakarta = jakarta_now()
+    new_msg = ContactMessage(
+        name=name,
+        email=email,
+        subject=subject,
+        message=msg_text,
+        created_at=waktu_jakarta
+    )
+    
+    db.session.add(new_msg)
+    db.session.commit()
+    
+    return jsonify({"status": "success", "message": "Pesan berhasil dikirim tanpa bot-check!"}), 200
         
 @app.route('/robots.txt')
 def robots():
@@ -331,5 +599,4 @@ def sitemap():
     return xml, 200, {'Content-Type': 'application/xml'}
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=8100)

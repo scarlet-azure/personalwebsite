@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS Dashboard Editor | Daniel Setiawan</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .modal-active { display: flex !important; }
+    </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen p-4 sm:p-8 md:p-12">
+    <div class="max-w-5xl mx-auto w-full">
+        
+        <!-- NAV BAR EDITOR -->
+        <div class="flex justify-between items-center border-b border-slate-800 pb-6 mb-8 gap-4">
+            <div>
+                <h1 class="font-display text-xl md:text-2xl font-extrabold tracking-wide uppercase text-white">Website Content Editor</h1>
+                <div class="flex space-x-4 mt-2 text-xs font-mono">
+                    <a href="/admin/dashboard" class="text-slate-400 hover:text-indigo-400"><i class="fas fa-inbox mr-1"></i> Inbox Messages</a>
+                    <span class="text-slate-700">|</span>
+                    <span class="text-indigo-400 font-bold"><i class="fas fa-edit mr-1"></i> Edit Content</span>
+                </div>
+            </div>
+            <a href="/admin/logout" class="px-4 py-2 bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 text-slate-300 text-xs font-medium rounded-xl transition-all font-mono border border-slate-700/60">LOGOUT</a>
+        </div>
+
+        <!-- ================= SEKSI TABEL DATA PORTFOLIO ================= -->
+        <div class="space-y-8">
+            
+            <!-- 0. LIST TENTANG SAYA (BIO) -->
+            <div class="bg-[#0d1321]/30 border border-slate-800/50 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-user-edit text-indigo-400 text-sm"></i>
+                        <h2 class="font-display text-xs font-bold uppercase tracking-wider text-white">Tentang Saya (Bio Utama)</h2>
+                    </div>
+                    <button onclick="openBioModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-xl font-mono transition-all cursor-pointer">
+                        <i class="fas fa-edit mr-1"></i> EDIT BIO
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-relaxed text-slate-400">
+                    <div class="bg-slate-900/20 p-4 border border-slate-800/40 rounded-xl">
+                        <span class="block font-mono text-[10px] text-indigo-400 uppercase font-bold mb-2">Bahasa Indonesia</span>
+                        <p class="whitespace-pre-wrap">{{ profile.bio_id if profile.bio_id else 'Belum ada bio bahasa Indonesia.' }}</p>
+                    </div>
+                    <div class="bg-slate-900/20 p-4 border border-slate-800/40 rounded-xl">
+                        <span class="block font-mono text-[10px] text-indigo-400 uppercase font-bold mb-2">English Version</span>
+                        <p class="whitespace-pre-wrap">{{ profile.bio_en if profile.bio_en else 'No English bio provided yet.' }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- A. LIST PENGALAMAN KERJA -->
+            <div class="bg-[#0d1321]/30 border border-slate-800/50 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-briefcase text-indigo-400 text-sm"></i>
+                        <h2 class="font-display text-xs font-bold uppercase tracking-wider text-white">Pengalaman Kerja</h2>
+                    </div>
+                    <button onclick="openModal('experience')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-xl font-mono transition-all cursor-pointer"><i class="fas fa-plus mr-1"></i> TAMBAH EXP</button>
+                </div>
+                <div class="overflow-x-auto w-full text-xs">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-slate-500 font-mono border-b border-slate-800 uppercase text-[10px]">
+                                <th class="py-2 px-2">Perusahaan</th>
+                                <th class="py-2 px-2">Jabatan (ID)</th>
+                                <th class="py-2 px-2">Periode</th>
+                                <th class="py-2 px-2 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/40">
+                            {% for exp in experiences %}
+                            <tr class="hover:bg-slate-800/10">
+                                <td class="py-3 px-2 font-semibold text-white">{{ exp.company }}</td>
+                                <td class="py-3 px-2 text-slate-400">{{ exp.title_id }}</td>
+                                <td class="py-3 px-2 text-slate-400 font-mono">
+                                    {{ exp.start_date.strftime('%b %Y') }} 
+                                    - 
+                                    {% if exp.end_date %}
+                                        {{ exp.end_date.strftime('%b %Y') }}
+                                    {% else %}
+                                        Present
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-2 text-center">
+                                    <button onclick="loadAndEdit('experience', '{{ exp.id }}')" class="text-indigo-400 hover:text-indigo-300 font-mono text-[11px] cursor-pointer"><i class="fas fa-edit"></i> Edit</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- B. LIST SKILLS -->
+            <div class="bg-[#0d1321]/30 border border-slate-800/50 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-code text-indigo-400 text-sm"></i>
+                        <h2 class="font-display text-xs font-bold uppercase tracking-wider text-white">Keahlian (Skills Stack)</h2>
+                    </div>
+                    <button onclick="openModal('skill')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-xl font-mono transition-all cursor-pointer"><i class="fas fa-plus mr-1"></i> TAMBAH SKILL</button>
+                </div>
+                <div class="overflow-x-auto w-full text-xs">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-slate-500 font-mono border-b border-slate-800 uppercase text-[10px]">
+                                <th class="py-2 px-2">Kategori</th>
+                                <th class="py-2 px-2">Nama Skill</th>
+                                <th class="py-2 px-2">Tingkat (EN)</th>
+                                <th class="py-2 px-2 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/40">
+                            {% for skill in skills %}
+                            <tr class="hover:bg-slate-800/10">
+                                <td class="py-3 px-2 font-mono text-indigo-400">{{ skill.category }}</td>
+                                <td class="py-3 px-2 font-semibold text-white">{{ skill.name_id }}</td>
+                                <td class="py-3 px-2 text-slate-400 font-mono uppercase">{{ skill.level_en }}</td>
+                                <td class="py-3 px-2 text-center">
+                                    <button onclick="loadAndEdit('skill', '{{ skill.id }}')" class="text-indigo-400 hover:text-indigo-300 font-mono text-[11px] cursor-pointer"><i class="fas fa-edit"></i> Edit</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- C. LIST ACHIEVEMENTS & ORGANISASI -->
+            <div class="bg-[#0d1321]/30 border border-slate-800/50 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-trophy text-indigo-400 text-sm"></i>
+                        <h2 class="font-display text-xs font-bold uppercase tracking-wider text-white">Prestasi & Organisasi</h2>
+                    </div>
+                    <button onclick="openModal('achievement')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-xl font-mono transition-all cursor-pointer"><i class="fas fa-plus mr-1"></i> TAMBAH PRESTASI</button>
+                </div>
+                <div class="overflow-x-auto w-full text-xs">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-slate-500 font-mono border-b border-slate-800 uppercase text-[10px]">
+                                <th class="py-2 px-2">Tipe</th>
+                                <th class="py-2 px-2">Judul (ID)</th>
+                                <th class="py-2 px-2">Instansi/Subtext</th>
+                                <th class="py-2 px-2 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/40">
+                            {% for ach in achievements %}
+                            <tr class="hover:bg-slate-800/10">
+                                <td class="py-3 px-2 font-mono uppercase text-amber-500">{{ ach.type }}</td>
+                                <td class="py-3 px-2 font-semibold text-white truncate max-w-xs">{{ ach.text_id }}</td>
+                                <td class="py-3 px-2 text-slate-400">{{ ach.subtext_id }}</td>
+                                <td class="py-3 px-2 text-center">
+                                    <button onclick="loadAndEdit('achievement', '{{ ach.id }}')" class="text-indigo-400 hover:text-indigo-300 font-mono text-[11px] cursor-pointer"><i class="fas fa-edit"></i> Edit</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         SISTEM MODAL WINDOWS (TERISOLASI OVERLAY)
+         ========================================================================= -->
+    
+    <!-- 0. MODAL BIO (TERBARU) -->
+    <div id="modal-bio" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-[#0d1321] border border-slate-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-4">
+            <h3 class="font-display text-sm font-bold uppercase text-white tracking-wider border-b border-slate-800 pb-2 flex justify-between items-center">
+                <span>Edit Tentang Saya (Bio)</span>
+                <button onclick="closeBioModal()" class="text-slate-400 hover:text-white cursor-pointer text-xl">&times;</button>
+            </h3>
+            <form id="bio-form" onsubmit="saveBio(event)" class="space-y-4 text-xs font-sans">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 mb-1.5 font-mono uppercase font-bold text-[10px]">Bio (Bahasa Indonesia)</label>
+                        <textarea name="bio_id" id="field-bio-id" rows="6" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none">{{ profile.bio_id }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1.5 font-mono uppercase font-bold text-[10px]">Bio (English)</label>
+                        <textarea name="bio_en" id="field-bio-en" rows="6" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none">{{ profile.bio_en }}</textarea>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeBioModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl cursor-pointer">Batal</button>
+                    <button type="submit" id="bio-btn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl cursor-pointer">Perbarui Bio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 1. MODAL EXPERIENCE -->
+    <div id="modal-experience" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-[#0d1321] border border-slate-800 w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-4">
+            <h3 class="font-display text-sm font-bold uppercase text-white tracking-wider border-b border-slate-800 pb-2 flex justify-between items-center">
+                <span id="title-experience">Tambah Pengalaman Kerja</span>
+                <button onclick="closeModal('experience')" class="text-slate-400 hover:text-white cursor-pointer text-xl">&times;</button>
+            </h3>
+            <!-- ================= FIX LAYOUT FORM DI MODAL EXPERIENCE ================= -->
+            <form id="form-experience" onsubmit="submitForm(event, 'experience')" class="space-y-4 text-xs font-sans">
+                <input type="hidden" name="id" id="field-exp-id">
+                
+                <!-- BARIS 1: Nama Perusahaan & Tech Stack -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Nama Perusahaan</label>
+                        <input type="text" name="company" id="field-exp-company" placeholder="Contoh: Surya Abadi Printing" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tech Stack</label>
+                        <input type="text" name="tech_stack" id="field-exp-tech" placeholder="Contoh: HTML, CSS, JavaScript" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <!-- BARIS 2: Pengaturan Tanggal (Start & End Date) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tanggal Mulai</label>
+                        <input type="date" name="start_date" id="field-exp-start" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 custom-date-input">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tanggal Selesai (Kosongkan jika masih aktif)</label>
+                        <input type="date" name="end_date" id="field-exp-end" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 custom-date-input">
+                    </div>
+                </div>
+
+                <!-- BARIS 3: Jabatan -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Jabatan (Indonesia)</label>
+                        <input type="text" name="title_id" id="field-exp-title-id" placeholder="Contoh: General Manager" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Jabatan (English)</label>
+                        <input type="text" name="title_en" id="field-exp-title-en" placeholder="Contoh: General Manager" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <!-- BARIS 4: Deskripsi Tugas -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Deskripsi Tugas (Indonesia)</label>
+                        <textarea name="description_id" id="field-exp-desc-id" placeholder="Tuliskan pencapaian dan tanggung jawab kerja Anda..." rows="4" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Deskripsi Tugas (English)</label>
+                        <textarea name="description_en" id="field-exp-desc-en" placeholder="Describe your achievements and job responsibilities..." rows="4" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"></textarea>
+                    </div>
+                </div>
+
+                <!-- BARIS 5: Tombol Aksi -->
+                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800/60 mt-2">
+                    <button type="button" onclick="closeModal('experience')" class="px-4 py-2 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/50 text-slate-300 rounded-xl transition-colors font-medium cursor-pointer">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-600/10 cursor-pointer">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. MODAL SKILL -->
+    <div id="modal-skill" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-[#0d1321] border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+            <h3 class="font-display text-sm font-bold uppercase text-white tracking-wider border-b border-slate-800 pb-2 flex justify-between items-center">
+                <span id="title-skill">Tambah Keahlian</span>
+                <button onclick="closeModal('skill')" class="text-slate-400 hover:text-white cursor-pointer text-xl">&times;</button>
+            </h3>
+            <form id="form-skill" onsubmit="submitForm(event, 'skill')" class="space-y-4 text-xs">
+                <input type="hidden" name="id" id="field-skill-id">
+                <div>
+                    <label class="block text-slate-400 mb-1 font-mono uppercase">Kategori</label>
+                    <select name="category" id="field-skill-cat" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                        <option value="tech">Technical/Web Stack</option>
+                        <option value="prod">Production/Industrial</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" name="name_id" id="field-skill-name-id" placeholder="Nama Skill (ID)" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                    <input type="text" name="name_en" id="field-skill-name-en" placeholder="Nama Skill (EN)" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" name="level_id" id="field-skill-lvl-id" placeholder="Level ID (cth: Ahli)" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                    <input type="text" name="level_en" id="field-skill-lvl-en" placeholder="Level EN (cth: Expert)" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                </div>
+                <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('skill')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl cursor-pointer">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl cursor-pointer">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. MODAL ACHIEVEMENT / ORG -->
+    <div id="modal-achievement" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-[#0d1321] border border-slate-800 w-full max-w-xl rounded-2xl p-6 shadow-2xl space-y-4">
+            <h3 class="font-display text-sm font-bold uppercase text-white tracking-wider border-b border-slate-800 pb-2 flex justify-between items-center">
+                <span id="title-achievement">Tambah Prestasi / Organisasi</span>
+                <button onclick="closeModal('achievement')" class="text-slate-400 hover:text-white cursor-pointer text-xl">&times;</button>
+            </h3>
+            <form id="form-achievement" onsubmit="submitForm(event, 'achievement')" class="space-y-4 text-xs">
+                <input type="hidden" name="id" id="field-ach-id">
+                <div>
+                    <label class="block text-slate-400 mb-1 font-mono uppercase">Tipe Komponen</label>
+                    <select name="type" id="field-ach-type" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                        <option value="org">Organisasi / Posisi</option>
+                        <option value="award">Penghargaan / Juara</option>
+                        <option value="pub">Publikasi / Karya Ilmiah</option>
+                        <option value="cert">Sertifikasi Kompetensi</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input type="text" name="text_id" id="field-ach-text-id" placeholder="Judul Pencapaian (ID)" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                    <input type="text" name="text_en" id="field-ach-text-en" placeholder="Judul Pencapaian (EN)" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input type="text" name="subtext_id" id="field-ach-sub-id" placeholder="Penyelenggara (ID)" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                    <input type="text" name="subtext_en" id="field-ach-sub-en" placeholder="Penyelenggara (EN)" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-3 py-2 text-slate-200 w-full focus:outline-none">
+                </div>
+                <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('achievement')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl cursor-pointer">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl cursor-pointer">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LOGIKA JAVASCRIPT PENGENDALIAN MODAL & AJAX -->
+    <script>
+        // FUNGSI BIO MODAL OVERLAY
+        function openBioModal() {
+            document.getElementById('modal-bio').classList.add('modal-active');
+        }
+        function closeBioModal() {
+            document.getElementById('modal-bio').classList.remove('modal-active');
+        }
+
+        // FUNGSI UMUM MODAL PORTFOLIO
+        function openModal(type) {
+            document.getElementById(`form-${type}`).reset();
+            document.getElementById(`field-${type==='experience'?'exp':type==='skill'?'skill':'ach'}-id`).value = "";
+            document.getElementById(`title-${type}`).innerText = "Tambah " + type.toUpperCase();
+            document.getElementById(`modal-${type}`).classList.add('modal-active');
+        }
+
+        function closeModal(type) {
+            document.getElementById(`modal-${type}`).classList.remove('modal-active');
+        }
+
+        function loadAndEdit(type, id) {
+            fetch(`/admin/get-data/${type}/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById(`modal-${type}`).classList.add('modal-active');
+                document.getElementById(`title-${type}`).innerText = "Edit " + type.toUpperCase() + " #" + id;
+                
+                if(type === 'experience') {
+                    document.getElementById('field-exp-id').value = data.id;
+                    document.getElementById('field-exp-company').value = data.company;
+                    document.getElementById('field-exp-period').value = data.period;
+                    document.getElementById('field-exp-tech').value = data.tech_stack;
+                    document.getElementById('field-exp-title-id').value = data.title_id;
+                    document.getElementById('field-exp-title-en').value = data.title_en;
+                    document.getElementById('field-exp-desc-id').value = data.description_id;
+                    document.getElementById('field-exp-desc-en').value = data.description_en;
+                } else if(type === 'skill') {
+                    document.getElementById('field-skill-id').value = data.id;
+                    document.getElementById('field-skill-cat').value = data.category;
+                    document.getElementById('field-skill-name-id').value = data.name_id;
+                    document.getElementById('field-skill-name-en').value = data.name_en;
+                    document.getElementById('field-skill-lvl-id').value = data.level_id;
+                    document.getElementById('field-skill-lvl-en').value = data.level_en;
+                } else if(type === 'achievement') {
+                    document.getElementById('field-ach-id').value = data.id;
+                    document.getElementById('field-ach-type').value = data.type;
+                    document.getElementById('field-ach-text-id').value = data.text_id;
+                    document.getElementById('field-ach-text-en').value = data.text_en;
+                    document.getElementById('field-ach-sub-id').value = data.subtext_id;
+                    document.getElementById('field-ach-sub-en').value = data.subtext_en;
+                }
+            }).catch(() => alert("Gagal mengambil data objek."));
+        }
+
+        function submitForm(event, type) {
+            event.preventDefault();
+            const form = document.getElementById(`form-${type}`);
+            fetch(`/admin/${type}/save`, { method: 'POST', body: new FormData(form) })
+            .then(res => res.json()).then(data => {
+                alert(data.message);
+                location.reload();
+            }).catch(() => alert("Gagal mengeksekusi penyimpanan data."));
+        }
+
+        function saveBio(event) {
+            event.preventDefault();
+            const btn = document.getElementById('bio-btn');
+            btn.disabled = true; btn.innerText = "Menyimpan...";
+
+            fetch('/admin/update-bio', { method: 'POST', body: new FormData(document.getElementById('bio-form')) })
+            .then(res => res.json()).then(data => {
+                alert(data.message);
+                location.reload();
+            })
+            .catch(() => alert("Gagal memperbarui biodata."))
+            .finally(() => { btn.disabled = false; btn.innerText = "Perbarui Bio"; });
+        }
+        if(type === 'experience') {
+            document.getElementById('field-exp-id').value = data.id;
+            document.getElementById('field-exp-company').value = data.company;
+            document.getElementById('field-exp-tech').value = data.tech_stack;
+            document.getElementById('field-exp-title-id').value = data.title_id;
+            document.getElementById('field-exp-title-en').value = data.title_en;
+            document.getElementById('field-exp-desc-id').value = data.description_id;
+            document.getElementById('field-exp-desc-en').value = data.description_en;
+            
+            // Konversi tanggal agar kompatibel dengan elemen <input type="date"> (mengambil substring YYYY-MM-DD)
+            document.getElementById('field-exp-start').value = data.start_date ? data.start_date.substring(0, 10) : "";
+            document.getElementById('field-exp-end').value = data.end_date ? data.end_date.substring(0, 10) : "";
+        }
+    </script>
+</body>
+</html>

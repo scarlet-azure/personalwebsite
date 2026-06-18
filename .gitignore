@@ -1,16 +1,16 @@
-# Mengabaikan Virtual Environment lokal Mac
-.venv/
-env/
-venv/
+# Python Cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+ENV/
 
-# Mengabaikan Database SQLite lokal (Agar password admin & pesan tidak bocor)
+# Database SQLite (Jangan sampai ikut ke-upload)
 instance/
 *.db
 
-# Mengabaikan file sistem Mac OS
-.DS_Store
-
-# Mengabaikan file environment keys (jika ada)
+# Environment Variables / Kunci Rahasia
 .env

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin | Daniel Setiawan</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen p-4 sm:p-8 md:p-12">
+    <div class="max-w-4xl mx-auto w-full">
+        
+        <div class="flex justify-between items-center border-b border-slate-800 pb-6 mb-6 gap-4">
+            <div>
+                <h1 class="font-display text-xl md:text-2xl font-extrabold tracking-wide uppercase text-white">Admin Control Panel</h1>
+                <p class="text-xs text-slate-400 mt-1">Selamat datang kembali, Daniel. Silakan pilih menu di bawah untuk mengelola website.</p>
+            </div>
+            <a href="/admin/logout" class="px-4 py-2 bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 text-slate-300 text-xs font-medium rounded-xl transition-all font-mono border border-slate-700/60">
+                LOGOUT <i class="fas fa-sign-out-alt ml-1"></i>
+            </a>
+        </div>
+
+        <div class="flex items-center space-x-2 border-b border-slate-800/60 pb-px mb-8 text-xs font-mono">
+            <div class="px-4 py-2.5 bg-indigo-600/10 text-indigo-400 font-bold border-b-2 border-indigo-500 flex items-center gap-2">
+                <i class="fas fa-inbox text-sm"></i> 
+                <span>INBOX MESSAGES ({{ messages|length }})</span>
+            </div>
+            
+            <a href="/admin/edit-content" class="px-4 py-2.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800/30 rounded-t-xl flex items-center gap-2 transition-all">
+                <i class="fas fa-edit text-sm"></i> 
+                <span>EDIT WEBSITE CONTENT</span>
+            </a>
+        </div>
+
+        <div class="space-y-4 w-full">
+            {% if not messages %}
+                <div class="text-center py-12 bg-[#0d1321]/20 border border-slate-800/60 rounded-2xl text-sm text-slate-500 font-mono">
+                    Belum ada pesan masuk dari formulir kontak.
+                </div>
+            {% else %}
+                {% for msg in messages %}
+                <div id="msg-card-{{ msg.id }}" class="bg-[#0d1321]/30 border border-slate-800/50 rounded-2xl p-5 md:p-6 shadow-sm hover:border-slate-700/60 transition-all w-full flex flex-col justify-between gap-4">
+                    <div class="w-full">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 border-b border-slate-800/40 pb-3 mb-3 text-xs font-mono">
+                            <div>
+                                <span class="text-white font-bold text-sm block sm:inline font-sans mb-1 sm:mb-0">{{ msg.name }}</span> 
+                                <span class="text-indigo-400 sm:ml-2">&lt;{{ msg.email }}&gt;</span>
+                            </div>
+                            <span class="text-slate-500 text-[11px]">{{ msg.created_at.strftime('%d %B %Y - %H:%M') }} WIB</span>
+                        </div>
+                        <h3 class="text-sm font-semibold text-slate-200 mb-2 font-display">Re: {{ msg.subject }}</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap font-sans">{{ msg.message }}</p>
+                    </div>
+
+                    <div class="flex items-center space-x-3 text-xs font-mono pt-2 border-t border-slate-800/30">
+                        <a href="mailto:{{ msg.email }}?subject=Re: {{ msg.subject }}" class="px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 rounded-lg transition-colors">
+                            <i class="fas fa-reply mr-1"></i> Reply Email
+                        </a>
+                        <button onclick="deleteMessage('{{ msg.id }}')" class="px-3 py-1.5 bg-rose-600/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/20 rounded-lg transition-colors cursor-pointer">
+                            <i class="fas fa-trash-alt mr-1"></i> Delete
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+    </div>
+
+    <script>
+        function deleteMessage(msgId) {
+            if (!confirm("Apakah Anda yakin ingin menghapus pesan ini secara permanen?")) return;
+
+            fetch(`/admin/message/delete/${msgId}`, { method: 'POST' })
+            .then(res => {
+                if (res.status === 200) {
+                    const card = document.getElementById(`msg-card-${msgId}`);
+                    card.classList.add('opacity-0', 'scale-95');
+                    setTimeout(() => {
+                        card.remove();
+                        location.reload(); // Refresh untuk memperbarui counter jumlah pesan di tab menu
+                    }, 300);
+                } else {
+                    alert("Gagal menghapus pesan dari server.");
+                }
+            })
+            .catch(() => alert("Terjadi masalah koneksi jaringan."));
+        }
+    </script>
+</body>
+</html>
