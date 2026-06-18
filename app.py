@@ -501,87 +501,80 @@ def send_email_notification(name, email, subject, message):
     except Exception as e:
         print(f"Gagal mengirim notifikasi email: {e}")
    
-@app.route('/contact', methods=['GET', 'POST'])
+# =========================================================================
+# ROUTE CONTACT FORM & SUBMISSION
+# =========================================================================
+@app.route('/contact', methods=['GET'])
 def contact_page():
-    # Mengatur bahasa aktif
+    # Mengatur bahasa aktif untuk tampilan halaman HTML
     lang = request.args.get('lang', 'id')
     if lang not in ['id', 'en']:
         lang = 'id'
     
     ui = CONTACT_TEXTS[lang]
-
-    if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        subject = request.form.get('subject')
-        message = request.form.get('message')
-
-        # 1. Cek apakah ada field yang kosong
-        if not name or not email or not subject or not message:
-            err_msg = "Semua field wajib diisi!" if lang == 'id' else "All fields are required!"
-            return jsonify({"status": "error", "message": err_msg}), 400
-
-        # 2. VALIDASI EMAIL: Periksa apakah format email match dengan REGEX
-        if not re.match(EMAIL_REGEX, email.strip()):
-            invalid_msg = "Format alamat email tidak valid!" if lang == 'id' else "Invalid email address format!"
-            return jsonify({"status": "error", "message": invalid_msg}), 400
-
-        # 3. Jika lolos validasi, baru teruskan simpan ke database SQLite
-        try:
-            new_msg = ContactMessage(
-                name=name, 
-                email=email.strip().lower(), # Bersihkan spasi dan paksa huruf kecil
-                subject=subject, 
-                message=message
-            )
-            db.session.add(new_msg)
-            db.session.commit()
-            
-            succ_msg = "Pesan Anda berhasil dikirim!" if lang == 'id' else "Your message has been sent successfully!"
-            return jsonify({"status": "success", "message": succ_msg}), 200
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"status": "error", "message": "Database error"}), 500
-
     return render_template('contact.html', ui=ui)
+
 
 @app.route('/contact/submit', methods=['POST'])
 def contact_submit():
-    # Ambil token turnstile dari form
+    # Ambil bahasa aktif dari parameter referer atau default ke 'id'
+    lang = request.args.get('lang', 'id')
+    if lang not in ['id', 'en']:
+        lang = 'id'
+
+    # 1. VALIDASI CLOUDFLARE TURNSTILE (ANTI-BOT)
     turnstile_response = request.form.get('cf-turnstile-response')
+    payload = {
+        'secret': '0x4AAAAAADnBgPJ1pYR1xBHDcWVBzwm2ut0', # Secret Key Panjang
+        'response': turnstile_response
+    }
+    try:
+        verify_response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=payload)
+        outcome = verify_response.json()
+        if not outcome.get('success'):
+            err_bot = "Validasi keamanan anti-bot gagal!" if lang == 'id' else "Anti-bot verification failed!"
+            return jsonify({"status": "error", "message": err_bot}), 400
+    except Exception:
+        return jsonify({"status": "error", "message": "Turnstile verification service unavailable"}), 500
     
-    # ==================== MATIKAN VALIDASI TURNSTILE SEMENTARA ====================
-    # COMMENT ATAU MATIKAN BLOK INI:
-    # payload = {
-    #     'secret': 'SECRET_KEY_ANDA',
-    #     'response': turnstile_response
-    # }
-    # verify_response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=payload)
-    # outcome = verify_response.json()
-    # if not outcome.get('success'):
-    #     return jsonify({"status": "error", "message": "Validasi keamanan anti-bot gagal!"}), 400
-    # ==============================================================================
-    
-    # Ambil data form seperti biasa
+    # 2. AMBIL DATA FORMULIR
     name = request.form.get('name')
     email = request.form.get('email')
     subject = request.form.get('subject')
-    msg_text = request.form.get('message')
+    message = request.form.get('message')
     
-    # Simpan ke database dengan waktu Jakarta (WIB)
-    waktu_jakarta = jakarta_now()
-    new_msg = ContactMessage(
-        name=name,
-        email=email,
-        subject=subject,
-        message=msg_text,
-        created_at=waktu_jakarta
-    )
-    
-    db.session.add(new_msg)
-    db.session.commit()
-    
-    return jsonify({"status": "success", "message": "Pesan berhasil dikirim tanpa bot-check!"}), 200
+    # 3. VALIDASI KEKOSONGAN FIELD
+    if not name or not email or not subject or not message:
+        err_msg = "Semua field wajib diisi!" if lang == 'id' else "All fields are required!"
+        return jsonify({"status": "error", "message": err_msg}), 400
+
+    # 4. VALIDASI STRUKTUR EMAIL (REGEX)
+    if not re.match(EMAIL_REGEX, email.strip()):
+        invalid_msg = "Format alamat email tidak valid!" if lang == 'id' else "Invalid email address format!"
+        return jsonify({"status": "error", "message": invalid_msg}), 400
+
+    # 5. TERUSKAN SIMPAN KE DATABASE (contact.db) & KIRIM NOTIFIKASI EMAIL
+    try:
+        waktu_jakarta = jakarta_now()
+        new_msg = ContactMessage(
+            name=name,
+            email=email.strip().lower(),
+            subject=subject,
+            message=message,
+            created_at=waktu_jakarta # Waktu WIB murni
+        )
+        db.session.add(new_msg)
+        db.session.commit()
+
+        # Pemicu notifikasi email otomatis ke kotak masuk Anda
+        send_email_notification(name, email.strip().lower(), subject, message)
+        
+        succ_msg = "Pesan Anda berhasil dikirim!" if lang == 'id' else "Your message has been sent successfully!"
+        return jsonify({"status": "success", "message": succ_msg}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Database error atau kegagalan sistem."}), 500
         
 @app.route('/robots.txt')
 def robots():
