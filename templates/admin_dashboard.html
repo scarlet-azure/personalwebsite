@@ -14,10 +14,10 @@
         .font-mono { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
+  
 <body class="bg-[#0b0f19] text-slate-100 min-h-screen p-4 sm:p-8 md:p-12">
     <div class="max-w-4xl mx-auto w-full">
         
-        <!-- HEADER CONTROL PANEL -->
         <div class="flex justify-between items-center border-b border-slate-800 pb-6 mb-6 gap-4">
             <div>
                 <h1 class="font-display text-xl md:text-2xl font-extrabold tracking-wide uppercase text-white">Admin Control Panel</h1>
@@ -28,55 +28,102 @@
             </a>
         </div>
 
-        <!-- TIGA MENU TABS INTERAKTIF -->
         <div class="flex items-center space-x-1 border-b border-slate-800/60 pb-px mb-8 text-xs font-mono overflow-x-auto whitespace-nowrap">
-            <!-- Tab 1: Analytics -->
             <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="px-4 py-2.5 bg-indigo-600/10 text-indigo-400 font-bold border-b-2 border-indigo-500 flex items-center gap-2 cursor-pointer transition-all">
                 <i class="fas fa-chart-pie text-sm"></i> <span>METRICS</span>
             </button>
-            
-            <!-- Tab 2: Inbox Messages -->
             <button onclick="switchTab('inbox')" id="tab-btn-inbox" class="px-4 py-2.5 text-slate-400 hover:text-indigo-400 border-b-2 border-transparent flex items-center gap-2 cursor-pointer transition-all">
                 <i class="fas fa-inbox text-sm"></i> <span>INBOX ({{ messages|length }})</span>
             </button>
-            
-            <!-- Tab 3: Edit Website Content (Pindahan dari admin_edit.html) -->
             <button onclick="switchTab('edit-content')" id="tab-btn-edit-content" class="px-4 py-2.5 text-slate-400 hover:text-indigo-400 border-b-2 border-transparent flex items-center gap-2 cursor-pointer transition-all">
                 <i class="fas fa-edit text-sm"></i> <span>EDIT CONTENT</span>
             </button>
+            <button onclick="switchTab('edit-showcase')" id="tab-btn-edit-showcase" class="px-4 py-2.5 text-slate-400 hover:text-indigo-400 border-b-2 border-transparent flex items-center gap-2 cursor-pointer transition-all">
+                <i class="fas fa-images text-sm"></i> <span>EDIT SHOWCASE</span>
+            </button>
         </div>
 
-        <!-- ================= PANEL 1: ANALYTICS CONTENT ================= -->
         <div id="panel-analytics" class="space-y-8 block">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div class="p-6 bg-[#0d1321]/40 border border-slate-800 rounded-2xl flex items-center space-x-4">
-                    <div class="p-3.5 bg-indigo-600/10 text-indigo-400 rounded-xl border border-indigo-500/10"><i class="fas fa-eye text-lg"></i></div>
+                    <div class="p-3.5 bg-indigo-600/10 text-indigo-400 rounded-xl border border-indigo-500/10">
+                        <i class="fas fa-eye text-lg"></i>
+                    </div>
                     <div>
                         <span class="block font-mono text-[10px] text-slate-400 uppercase tracking-wider">Total Kunjungan Halaman</span>
                         <span class="text-3xl font-bold text-white mt-0.5 block font-display">{{ total_views }}</span>
                     </div>
                 </div>
                 <div class="p-6 bg-[#0d1321]/40 border border-slate-800 rounded-2xl flex items-center space-x-4">
-                    <div class="p-3.5 bg-amber-600/10 text-amber-400 rounded-xl border border-amber-500/10"><i class="fas fa-envelope text-lg"></i></div>
+                    <div class="p-3.5 bg-amber-600/10 text-amber-400 rounded-xl border border-amber-500/10">
+                        <i class="fas fa-envelope text-lg"></i>
+                    </div>
                     <div>
                         <span class="block font-mono text-[10px] text-slate-400 uppercase tracking-wider">Total Inbox Saat Ini</span>
                         <span class="text-3xl font-bold text-white mt-0.5 block font-display">{{ messages|length }}</span>
                     </div>
                 </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
-                    <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 mb-6 flex items-center"><i class="fas fa-laptop-mobile mr-2"></i> Perangkat Pengunjung</h3>
+                    <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 mb-6 flex items-center">
+                        <i class="fas fa-laptop mr-2"></i> Perangkat Pengunjung
+                    </h3>
                     <div class="w-full max-w-[210px] mx-auto"><canvas id="deviceChart"></canvas></div>
                 </div>
                 <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
-                    <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 mb-6 flex items-center"><i class="fas fa-mouse-pointer mr-2"></i> Metrik Klik Tautan</h3>
+                    <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 mb-6 flex items-center">
+                        <i class="fas fa-mouse-pointer mr-2"></i> Metrik Klik Tautan
+                    </h3>
                     <div class="w-full max-w-[340px] mx-auto"><canvas id="clickChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="bg-[#0d1321]/40 border border-slate-800/80 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-base font-bold text-white mb-5 uppercase tracking-widest font-mono flex items-center">
+                    <span class="w-2 h-2 bg-indigo-500 rounded-full mr-2.5 animate-pulse"></span>
+                    Visitor Analytics Logs (Last 50 Views)
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300 font-sans border-collapse">
+                        <thead class="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 font-mono border-b border-slate-800">
+                            <tr>
+                                <th class="px-5 py-3.5 font-bold">Waktu (WIB)</th>
+                                <th class="px-5 py-3.5 font-bold">Halaman</th>
+                                <th class="px-5 py-3.5 font-bold">IP Address</th>
+                                <th class="px-5 py-3.5 font-bold">Lokasi Asal</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60 bg-[#0b0f19]/20">
+                            {% for view in recent_views %}
+                            <tr class="hover:bg-indigo-500/5 transition-all duration-200">
+                                <td class="px-5 py-3.5 font-mono text-xs text-slate-400">{{ view.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td class="px-5 py-3.5">
+                                    <span class="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-xs font-mono font-medium">
+                                        {{ view.page_url }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-3.5 font-mono text-xs text-slate-500">{{ view.ip_address }}</td>
+                                <td class="px-5 py-3.5 font-sans text-xs text-emerald-400 font-medium">
+                                    <i class="fas fa-map-marker-alt text-xs mr-1.5 text-emerald-500"></i>
+                                    {{ view.location if view.location else 'Unknown Location' }}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="px-5 py-12 text-center text-slate-500 font-mono text-xs tracking-wide">
+                                    <i class="fas fa-database mb-2 text-slate-600 text-lg block"></i>
+                                    Belum ada data kunjungan terbaru yang terdaftar.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- ================= PANEL 2: INBOX CONTENT ================= -->
         <div id="panel-inbox" class="space-y-4 hidden">
             {% if not messages %}
                 <div class="text-center py-12 bg-[#0d1321]/20 border border-slate-800/60 rounded-2xl text-sm text-slate-500 font-mono">Belum ada pesan masuk dari formulir kontak.</div>
@@ -103,38 +150,31 @@
             {% endif %}
         </div>
 
-        <!-- ================= PANEL 3: EDIT WEBSITE CONTENT ================= -->
         <div id="panel-edit-content" class="space-y-6 hidden">
-            <!-- Terapkan kode Render Tabel-Tabel Pengalaman Kerja, Skill, & Achievement Anda yang ada di file admin_edit.html lama Anda ke sini -->
-             <!-- ================= SUB-PANEL: BIOGRAPHY (BIO) ================= -->
-                <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
-                    <div class="flex justify-between items-center border-b border-slate-800/60 pb-3 mb-4">
-                        <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 flex items-center">
-                            <i class="fas fa-user-circle mr-2"></i> Profile Bio
-                        </h3>
-                        <button onclick="openModal('profile')" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-500 transition-colors cursor-pointer">EDIT BIO</button>
+            <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
+                <div class="flex justify-between items-center border-b border-slate-800/60 pb-3 mb-4">
+                    <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 flex items-center">
+                        <i class="fas fa-user-circle mr-2"></i> Profile Bio
+                    </h3>
+                    <button onclick="openModal('profile')" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-500 transition-colors cursor-pointer">EDIT BIO</button>
+                </div>
+                <div class="space-y-3 text-xs font-sans">
+                    <div>
+                        <span class="block font-mono text-[10px] text-slate-500 uppercase font-bold mb-1">Bahasa Indonesia</span>
+                        <p class="text-slate-300 leading-relaxed bg-[#0b0f19] p-3 border border-slate-800/50 rounded-xl">{{ profile.bio_id if profile else 'Belum ada data.' }}</p>
                     </div>
-                    <div class="space-y-3 text-xs font-sans">
-                        <div>
-                            <span class="block font-mono text-[10px] text-slate-500 uppercase font-bold mb-1">Bahasa Indonesia</span>
-                            <p class="text-slate-300 leading-relaxed bg-[#0b0f19] p-3 border border-slate-800/50 rounded-xl">{{ profile.bio_id if profile else 'Belum ada data.' }}</p>
-                        </div>
-                        <div>
-                            <span class="block font-mono text-[10px] text-slate-500 uppercase font-bold mb-1">English</span>
-                            <p class="text-slate-300 leading-relaxed bg-[#0b0f19] p-3 border border-slate-800/50 rounded-xl">{{ profile.bio_en if profile else 'Belum ada data.' }}</p>
-                        </div>
+                    <div>
+                        <span class="block font-mono text-[10px] text-slate-500 uppercase font-bold mb-1">English</span>
+                        <p class="text-slate-300 leading-relaxed bg-[#0b0f19] p-3 border border-slate-800/50 rounded-xl">{{ profile.bio_en if profile else 'Belum ada data.' }}</p>
                     </div>
                 </div>
+            </div>
                 
             <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
                 <div class="flex justify-between items-center border-b border-slate-800/60 pb-3 mb-4">
                     <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 flex items-center"><i class="fas fa-briefcase mr-2"></i> Pengalaman Kerja</h3>
-                    <!-- Panggil fungsi modal bawaan Anda di sini -->
                     <button onclick="openModal('experience')" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg cursor-pointer hover:bg-indigo-500 transition-colors">+ TAMBAH EXP</button>
                 </div>
-                
-
-                <!-- Tabel Pratinjau Pengalaman Kerja (Sinkronisasi Kronologis Tanggal) -->
                 <div class="overflow-x-auto text-xs">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -153,8 +193,9 @@
                                 <td class="py-3 px-2 text-slate-400 font-mono">
                                     {{ exp.start_date.strftime('%b %Y') }} - {% if exp.end_date %}{{ exp.end_date.strftime('%b %Y') }}{% else %}Present{% endif %}
                                 </td>
-                                <td class="py-3 px-2 text-right">
+                                <td class="py-3 px-2 text-right space-x-3">
                                     <button onclick="loadAndEdit('experience', '{{ exp.id }}')" class="text-indigo-400 hover:underline font-mono cursor-pointer">Edit</button>
+                                    <button onclick="confirmAndExecuteDelete('experience', '{{ exp.id }}')" class="text-rose-500 hover:underline font-mono cursor-pointer">Hapus</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -163,7 +204,6 @@
                 </div>
             </div>          
 
-            <!-- ================= SUB-PANEL: SKILLS ================= -->
             <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
                 <div class="flex justify-between items-center border-b border-slate-800/60 pb-3 mb-4">
                     <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 flex items-center">
@@ -187,8 +227,9 @@
                                 <td class="py-3 px-2 font-mono text-[11px] text-indigo-400 uppercase tracking-wider">{{ sk.category }}</td>
                                 <td class="py-3 px-2 font-semibold text-white">{{ sk.name_id }}</td>
                                 <td class="py-3 px-2 text-slate-400">{{ sk.level_id }}</td>
-                                <td class="py-3 px-2 text-right">
+                                <td class="py-3 px-2 text-right space-x-3">
                                     <button onclick="loadAndEdit('skill', '{{ sk.id }}')" class="text-indigo-400 hover:underline font-mono cursor-pointer">Edit</button>
+                                    <button onclick="confirmAndExecuteDelete('skill', '{{ sk.id }}')" class="text-rose-500 hover:underline font-mono cursor-pointer">Hapus</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -197,7 +238,6 @@
                 </div>
             </div>
 
-            <!-- ================= SUB-PANEL: ACHIEVEMENTS & ORGANISASI ================= -->
             <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
                 <div class="flex justify-between items-center border-b border-slate-800/60 pb-3 mb-4">
                     <h3 class="text-xs font-bold uppercase font-mono text-indigo-400 flex items-center">
@@ -221,8 +261,9 @@
                                 <td class="py-3 px-2 font-mono text-[10px] text-amber-400 uppercase tracking-wide">{{ ac.type }}</td>
                                 <td class="py-3 px-2 font-semibold text-white">{{ ac.text_id }}</td>
                                 <td class="py-3 px-2 text-slate-400">{{ ac.subtext_id }}</td>
-                                <td class="py-3 px-2 text-right">
+                                <td class="py-3 px-2 text-right space-x-3">
                                     <button onclick="loadAndEdit('achievement', '{{ ac.id }}')" class="text-indigo-400 hover:underline font-mono cursor-pointer">Edit</button>
+                                    <button onclick="confirmAndExecuteDelete('achievement', '{{ ac.id }}')" class="text-rose-500 hover:underline font-mono cursor-pointer">Hapus</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -232,19 +273,89 @@
             </div>
         </div>
 
-    </div>
-<!-- ================================================================= -->
-    <!-- ==================== CONTAINER MODAL POPUP ====================== -->
-    <!-- ================================================================= -->
+        <div id="panel-edit-showcase" class="space-y-6 hidden">
+            
+            <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
+                <div class="flex justify-between items-center border-b border-slate-800/60 pb-3 mb-4">
+                    <h3 class="text-xs font-bold font-mono text-indigo-400 uppercase tracking-widest flex items-center">
+                        <i class="fas fa-print mr-2"></i> Portofolio Cetak / Produksi
+                    </h3>
+                    <button onclick="openShowcaseAddModal('production')" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-mono font-bold rounded-lg hover:bg-indigo-500 transition-colors cursor-pointer">+ TAMBAH CETAK</button>
+                </div>
 
-    <!-- 1. MODAL EXPERIENCE -->
+                <div class="overflow-x-auto text-xs">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-500 font-mono border-b border-slate-800 text-[10px] uppercase">
+                                <th class="py-2 px-2">Judul Proyek (ID)</th>
+                                <th class="py-2 px-2">Kategori</th>
+                                <th class="py-2 px-2 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/30">
+                            {% for prod in gallery %}
+                            <tr class="hover:bg-slate-800/5">
+                                <td class="py-3 px-2 font-semibold text-white">{{ prod.title_id }}</td>
+                                <td class="py-3 px-2 text-slate-400 font-mono text-[11px]">{{ prod.category_id }}</td>
+                                <td class="py-3 px-2 text-right space-x-3">
+                                    <button onclick="loadAndEditShowcase('production', '{{ prod.id }}')" class="text-indigo-400 hover:underline font-mono cursor-pointer">Edit</button>
+                                    <button onclick="confirmAndExecuteDelete('production', '{{ prod.id }}')" class="text-rose-500 hover:underline font-mono cursor-pointer">Hapus</button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="py-4 text-center text-slate-600 font-mono text-[11px]">Belum ada data portofolio produksi cetak.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="p-6 bg-[#0d1321]/30 border border-slate-800/60 rounded-2xl">
+                <div class="flex justify-between items-center border-b border-slate-800/60 pb-3 mb-4">
+                    <h3 class="text-xs font-bold font-mono text-emerald-400 uppercase tracking-widest flex items-center">
+                        <i class="fas fa-code mr-2"></i> Portofolio Web Development
+                    </h3>
+                    <button onclick="openShowcaseAddModal('web')" class="px-3 py-1.5 bg-emerald-600 text-white text-xs font-mono font-bold rounded-lg hover:bg-emerald-500 transition-colors cursor-pointer">+ TAMBAH WEB</button>
+                </div>
+
+                <div class="overflow-x-auto text-xs">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-500 font-mono border-b border-slate-800 text-[10px] uppercase">
+                                <th class="py-2 px-2">Nama Proyek</th>
+                                <th class="py-2 px-2">Tech Stack</th>
+                                <th class="py-2 px-2 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/30">
+                            {% for web in projects %}
+                            <tr class="hover:bg-slate-800/5">
+                                <td class="py-3 px-2 font-semibold text-white">{{ web.title }}</td>
+                                <td class="py-3 px-2 text-slate-400 font-mono text-[11px]">{{ web.tech_stack }}</td>
+                                <td class="py-3 px-2 text-right space-x-3">
+                                    <button onclick="loadAndEditShowcase('web', '{{ web.id }}')" class="text-indigo-400 hover:underline font-mono cursor-pointer">Edit</button>
+                                    <button onclick="confirmAndExecuteDelete('web', '{{ web.id }}')" class="text-rose-500 hover:underline font-mono cursor-pointer">Hapus</button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="py-4 text-center text-slate-600 font-mono text-[11px]">Belum ada data portofolio web development.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     <div id="modal-experience" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50 transition-all">
         <div class="bg-[#0d1321] border border-slate-800/80 rounded-2xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
                 <h3 class="font-display text-sm font-bold uppercase tracking-wider text-white">Kelola Experience</h3>
                 <button onclick="closeModal('experience')" class="text-slate-500 hover:text-white font-mono text-base cursor-pointer">&times;</button>
             </div>
-            <!-- Masukkan form layout form-experience yang sudah rapi sebelumnya ke sini -->
             <form id="form-experience" onsubmit="submitForm(event, 'experience')" class="space-y-4 text-xs font-sans">
                 <input type="hidden" name="id" id="field-exp-id">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -263,7 +374,7 @@
                         <input type="date" name="start_date" id="field-exp-start" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tanggal Selesai (Kosongkan jika aktif)</label>
+                        <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tanggal Selesai</label>
                         <input type="date" name="end_date" id="field-exp-end" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
@@ -287,15 +398,17 @@
                         <textarea name="description_en" id="field-exp-desc-en" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none"></textarea>
                     </div>
                 </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800/60">
-                    <button type="button" onclick="closeModal('experience')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer">Batal</button>
-                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all cursor-pointer">Simpan</button>
+                <div class="flex justify-between items-center pt-3 border-t border-slate-800/60">
+                    <button type="button" id="btn-modal-del-experience" onclick="deleteFromModalInside('experience')" class="hidden px-4 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-xl transition-all font-mono cursor-pointer">HAPUS DATA</button>
+                    <div class="space-x-3 ml-auto">
+                        <button type="button" onclick="closeModal('experience')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl cursor-pointer">Batal</button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl cursor-pointer">Simpan</button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- 2. MODAL PROFILE/BIO -->
     <div id="modal-profile" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50 transition-all">
         <div class="bg-[#0d1321] border border-slate-800/80 rounded-2xl max-w-xl w-full p-6 relative shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
@@ -312,14 +425,13 @@
                     <textarea name="bio_en" id="field-prof-en" rows="4" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"></textarea>
                 </div>
                 <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800/60">
-                    <button type="button" onclick="closeModal('profile')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer">Batal</button>
-                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all cursor-pointer">Simpan</button>
+                    <button type="button" onclick="closeModal('profile')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl cursor-pointer">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl cursor-pointer">Simpan</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- 3. MODAL SKILL -->
     <div id="modal-skill" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50 transition-all">
         <div class="bg-[#0d1321] border border-slate-800/80 rounded-2xl max-w-md w-full p-6 relative shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
@@ -329,8 +441,8 @@
             <form id="form-skill" onsubmit="submitForm(event, 'skill')" class="space-y-4 text-xs font-sans">
                 <input type="hidden" name="id" id="field-skill-id">
                 <div>
-                    <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Kategori (tech / prod)</label>
-                    <input type="text" name="category" id="field-skill-cat" required placeholder="Contoh: tech" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                    <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Kategori</label>
+                    <input type="text" name="category" id="field-skill-cat" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Nama Skill</label>
@@ -339,22 +451,24 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Level (ID)</label>
-                        <input type="text" name="level_id" id="field-skill-lvl-id" required placeholder="Contoh: Ahli" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                        <input type="text" name="level_id" id="field-skill-lvl-id" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Level (EN)</label>
-                        <input type="text" name="level_en" id="field-skill-lvl-en" required placeholder="Contoh: Expert" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                        <input type="text" name="level_en" id="field-skill-lvl-en" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800/60">
-                    <button type="button" onclick="closeModal('skill')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer">Batal</button>
-                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all cursor-pointer">Simpan</button>
+                <div class="flex justify-between items-center pt-3 border-t border-slate-800/60">
+                    <button type="button" id="btn-modal-del-skill" onclick="deleteFromModalInside('skill')" class="hidden px-4 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-xl transition-all font-mono cursor-pointer">HAPUS DATA</button>
+                    <div class="space-x-3 ml-auto">
+                        <button type="button" onclick="closeModal('skill')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl cursor-pointer">Batal</button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl cursor-pointer">Simpan</button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- 4. MODAL ACHIEVEMENT -->
     <div id="modal-achievement" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50 transition-all">
         <div class="bg-[#0d1321] border border-slate-800/80 rounded-2xl max-w-md w-full p-6 relative shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
@@ -364,8 +478,8 @@
             <form id="form-achievement" onsubmit="submitForm(event, 'achievement')" class="space-y-4 text-xs font-sans">
                 <input type="hidden" name="id" id="field-ach-id">
                 <div>
-                    <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tipe (org / award / cert / pub)</label>
-                    <input type="text" name="type" id="field-ach-type" required placeholder="Contoh: award" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                    <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tipe</label>
+                    <input type="text" name="type" id="field-ach-type" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Nama Pencapaian (ID)</label>
@@ -385,40 +499,91 @@
                         <input type="text" name="subtext_en" id="field-ach-sub-en" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800/60">
-                    <button type="button" onclick="closeModal('achievement')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer">Batal</button>
-                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all cursor-pointer">Simpan</button>
+                <div class="flex justify-between items-center pt-3 border-t border-slate-800/60">
+                    <button type="button" id="btn-modal-del-achievement" onclick="deleteFromModalInside('achievement')" class="hidden px-4 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-xl transition-all font-mono cursor-pointer">HAPUS DATA</button>
+                    <div class="space-x-3 ml-auto">
+                        <button type="button" onclick="closeModal('achievement')" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl cursor-pointer">Batal</button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl cursor-pointer">Simpan</button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
-    <!-- SCRIPT LOGIKA NAVIGATION TAB, GRAPHS & AJAX -->
+
+    <div id="modal-showcase-edit" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50 transition-all">
+        <div class="bg-[#0d1321] border border-slate-800/80 rounded-2xl max-w-xl w-full p-6 relative shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                <h3 id="modal-showcase-title" class="font-display text-sm font-bold uppercase tracking-wider text-white">Edit Portofolio</h3>
+                <button onclick="closeShowcaseModal()" class="text-slate-500 hover:text-white font-mono text-base cursor-pointer">&times;</button>
+            </div>
+            
+            <form id="form-showcase-dynamic" onsubmit="submitShowcaseEditForm(event)" enctype="multipart/form-data" class="space-y-4 text-xs font-sans">
+                <input type="hidden" name="id" id="field-shw-id">
+                <input type="hidden" name="type" id="field-shw-type">
+                
+                <div id="dynamic-inputs-holder" class="space-y-4"></div>
+                
+                <div class="flex justify-between items-center pt-3 border-t border-slate-800/60 font-mono">
+                    <button type="button" id="btn-modal-del-showcase" onclick="deleteShowcaseFromModalInside()" class="hidden px-4 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white rounded-xl transition-all cursor-pointer">HAPUS DATA</button>
+                    <div class="space-x-3 ml-auto">
+                        <button type="button" onclick="closeShowcaseModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl cursor-pointer">Batal</button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl cursor-pointer">Update Data</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+      
+      <!-- ================= MODAL CONFIRMATION ================= -->
+      <div id="modal-custom-confirm" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-[60] transition-all">
+          <div class="bg-[#0d1321] border border-slate-800 rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl relative">
+              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 mb-4">
+                  <i class="fas fa-exclamation-triangle text-lg"></i>
+              </div>
+              <h3 class="font-display text-base font-bold text-white uppercase tracking-wider mb-2">Konfirmasi Hapus</h3>
+              <p id="confirm-modal-text" class="text-xs text-slate-400 font-sans leading-relaxed px-2 mb-6">Apakah Anda yakin ingin menghapus data ini secara permanen?</p>
+
+              <div class="flex items-center gap-3 font-mono text-xs">
+                  <button onclick="closeCustomConfirm()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer">
+                      BATAL
+                  </button>
+                  <button id="btn-confirm-execute" class="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-colors cursor-pointer">
+                      YA, HAPUS
+                  </button>
+              </div>
+          </div>
+      </div>
+      
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 pointer-events-none"></div>
+      
     <script>
-        // 1. Logika Pengendali Perpindahan Tab Mandiri
+        // Fungsi navigasi tab yang dimodifikasi dengan simpanan localStorage
         function switchTab(target) {
-            // Panel Elemen
             const anaPanel = document.getElementById('panel-analytics');
             const ibxPanel = document.getElementById('panel-inbox');
             const edtPanel = document.getElementById('panel-edit-content');
+            const shwPanel = document.getElementById('panel-edit-showcase');
             
-            // Tombol Elemen
             const anaBtn = document.getElementById('tab-btn-analytics');
             const ibxBtn = document.getElementById('tab-btn-inbox');
             const edtBtn = document.getElementById('tab-btn-edit-content');
+            const shwBtn = document.getElementById('tab-btn-edit-showcase');
 
-            // Sembunyikan Seluruh Panel Terlebih Dahulu
+            if (!anaPanel || !ibxPanel || !edtPanel || !shwPanel) return;
+
             anaPanel.className = 'hidden';
             ibxPanel.className = 'hidden';
             edtPanel.className = 'hidden';
+            shwPanel.className = 'hidden';
             
-            // Reset Seluruh Gaya Desain Tombol Tab Menjadi Pasif
             const pasifStyle = 'px-4 py-2.5 text-slate-400 hover:text-indigo-400 border-b-2 border-transparent flex items-center gap-2 cursor-pointer transition-all';
             anaBtn.className = pasifStyle;
             ibxBtn.className = pasifStyle;
             edtBtn.className = pasifStyle;
+            shwBtn.className = pasifStyle;
 
-            // Aktifkan Panel & Tombol yang Dituju Sesuai Target Klik
             const aktifStyle = 'px-4 py-2.5 bg-indigo-600/10 text-indigo-400 font-bold border-b-2 border-indigo-500 flex items-center gap-2 cursor-pointer transition-all';
+            
             if (target === 'analytics') {
                 anaPanel.className = 'space-y-8 block';
                 anaBtn.className = aktifStyle;
@@ -428,22 +593,60 @@
             } else if (target === 'edit-content') {
                 edtPanel.className = 'space-y-6 block';
                 edtBtn.className = aktifStyle;
+            } else if (target === 'edit-showcase') {
+                shwPanel.className = 'space-y-6 block';
+                shwBtn.className = aktifStyle;
             }
+            
+            // Simpan status tab aktif saat ini ke memori browser
+            localStorage.setItem('activeAdminTab', target);
         }
 
-        // 2. Fungsi Hapus Pesan AJAX
+        // Pemicu otomatis saat halaman pertama kali dibuka atau di-reload
+        document.addEventListener("DOMContentLoaded", function() {
+            const savedTab = localStorage.getItem('activeAdminTab') || 'analytics';
+            switchTab(savedTab);
+        });
+
+        // ==================== ENGINE OPERASIONAL TOAST NOTIFIKASI ====================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            toast.className = `flex items-center gap-3 px-5 py-3.5 rounded-xl border font-sans text-xs font-semibold shadow-2xl transition-all duration-300 translate-y-5 opacity-0 pointer-events-auto min-w-[280px] max-w-sm ${
+                type === 'success' 
+                ? 'bg-emerald-950/90 text-emerald-400 border-emerald-500/30' 
+                : 'bg-rose-950/90 text-rose-400 border-rose-500/30'
+            }`;
+            
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            toast.innerHTML = `<i class="${icon} text-sm"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-5', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-20px]', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         function deleteMessage(msgId) {
             if (!confirm("Apakah Anda yakin ingin menghapus pesan ini secara permanen?")) return;
             fetch(`/admin/message/delete/${msgId}`, { method: 'POST' })
             .then(res => {
                 if (res.status === 200) {
+                    showToast("Pesan masuk berhasil dihapus.");
                     document.getElementById(`msg-card-${msgId}`).remove();
-                    location.reload();
-                } else { alert("Gagal menghapus pesan."); }
-            }).catch(() => alert("Masalah jaringan."));
+                    setTimeout(() => location.reload(), 800);
+                } else { showToast("Gagal menghapus pesan.", "error"); }
+            }).catch(() => showToast("Masalah jaringan.", "error"));
         }
 
-        // 3. Render Chart Perangkat (Chart.js)
         new Chart(document.getElementById('deviceChart'), {
             type: 'doughnut',
             data: {
@@ -457,7 +660,6 @@
             options: { plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } }, cutout: '75%' }
         });
 
-        // 4. Render Chart Klik Tautan External
         new Chart(document.getElementById('clickChart'), {
             type: 'bar',
             data: {
@@ -487,10 +689,24 @@
         function openModal(type) {
             const modal = document.getElementById(`modal-${type}`);
             if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
+                const idField = document.getElementById(`field-${type === 'achievement' ? 'ach' : type}-id`);
+                const delBtn = document.getElementById(`btn-modal-del-${type}`);
+                
+                if (!idField || idField.value === "") { 
+                    const form = document.getElementById(`form-${type}`);
+                    if (form) form.reset();
+                    if (delBtn) delBtn.classList.add('hidden');
+                } else {
+                    if (delBtn) delBtn.classList.remove('hidden');
+                }
+                modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all';
             }
         }
+
+        document.querySelector("[onclick=\"openModal('profile')\"]").addEventListener('click', () => {
+            document.getElementById('field-prof-id').value = `{{ profile.bio_id if profile else '' }}`;
+            document.getElementById('field-prof-en').value = `{{ profile.bio_en if profile else '' }}`;
+        });
 
         function closeModal(type) {
             const modal = document.getElementById(`modal-${type}`);
@@ -505,13 +721,13 @@
         }
 
         function loadAndEdit(type, id) {
-            // Ambil data spesifik dari API internal Flask via AJAX
             fetch(`/admin/get-data/${type}/${id}`)
             .then(res => res.json())
             .then(data => {
-                openModal(type);
+                const idFieldId = `field-${type === 'achievement' ? 'ach' : type}-id`;
+                document.getElementById(idFieldId).value = data.id;
+                
                 if (type === 'experience') {
-                    document.getElementById('field-exp-id').value = data.id;
                     document.getElementById('field-exp-company').value = data.company;
                     document.getElementById('field-exp-tech').value = data.tech_stack;
                     document.getElementById('field-exp-title-id').value = data.title_id;
@@ -521,46 +737,380 @@
                     document.getElementById('field-exp-start').value = data.start_date ? data.start_date.substring(0,10) : "";
                     document.getElementById('field-exp-end').value = data.end_date ? data.end_date.substring(0,10) : "";
                 } else if (type === 'skill') {
-                    document.getElementById('field-skill-id').value = data.id;
                     document.getElementById('field-skill-cat').value = data.category;
                     document.getElementById('field-skill-name').value = data.name_id;
                     document.getElementById('field-skill-lvl-id').value = data.level_id;
                     document.getElementById('field-skill-lvl-en').value = data.level_en;
                 } else if (type === 'achievement') {
-                    document.getElementById('field-ach-id').value = data.id;
                     document.getElementById('field-ach-type').value = data.type;
                     document.getElementById('field-ach-text-id').value = data.text_id;
                     document.getElementById('field-ach-text-en').value = data.text_en;
                     document.getElementById('field-ach-sub-id').value = data.subtext_id;
                     document.getElementById('field-ach-sub-en').value = data.subtext_en;
                 }
-            }).catch(() => alert("Gagal mengambil data dari server."));
+                openModal(type);
+            }).catch(() => showToast("Gagal memuat rekam data.", "error"));
         }
 
         function submitForm(event, type) {
             event.preventDefault();
             const form = document.getElementById(`form-${type}`);
-            const formData = new FormData(form);
-
-            fetch(`/admin/save-data/${type}`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => {
-                if (res.status === 200) {
+            fetch(`/admin/${type}/save`, { method: 'POST', body: new FormData(form) })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(resData => {
+                if (resData.status === 200) {
+                    showToast(resData.body.message || "Data berhasil disimpan!");
                     closeModal(type);
-                    location.reload(); // Muat ulang halaman agar perubahan data langsung terlihat
-                } else {
-                    alert("Gagal menyimpan data.");
+                    setTimeout(() => location.reload(), 800);
+                } else { 
+                    showToast("Gagal memproses: " + resData.body.message, "error"); 
                 }
-            }).catch(() => alert("Terjadi masalah jaringan."));
+            }).catch(() => showToast("Masalah jaringan.", "error"));
         }
 
-        // Tembak data profil khusus saat tombol EDIT BIO ditekan
-        document.querySelector("[onclick=\"openModal('profile')\"]").addEventListener('click', () => {
-            document.getElementById('field-prof-id').value = `{{ profile.bio_id if profile else '' }}`;
-            document.getElementById('field-prof-en').value = `{{ profile.bio_en if profile else '' }}`;
-        });
+        function submitShowcaseForm(event, type) {
+            event.preventDefault();
+            const form = document.getElementById(`form-${type === 'production' ? 'production' : 'webproject'}`);
+            fetch(`/admin/showcase/${type}/save`, { method: 'POST', body: new FormData(form) })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') { 
+                    showToast(data.message);
+                    setTimeout(() => location.reload(), 800);
+                } else { showToast(data.message, "error"); }
+            }).catch(() => showToast("Gagal mengunggah berkas item.", "error"));
+        }
+
+        // ==================== KONTROL EVENT MANAGEMENT SHOWCASE ====================
+        function loadAndEditShowcase(type, id) {
+            const modal = document.getElementById('modal-showcase-edit');
+            const title = document.getElementById('modal-showcase-title');
+            const holder = document.getElementById('dynamic-inputs-holder');
+            const delBtn = document.getElementById('btn-modal-del-showcase');
+            
+            document.getElementById('field-shw-id').value = id;
+            document.getElementById('field-shw-type').value = type;
+            if (delBtn) delBtn.classList.remove('hidden');
+            
+            fetch(`/admin/get-data/${type}/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                holder.innerHTML = "";
+                if(type === 'production') {
+                    title.innerText = "Kelola Item Cetak / Produksi";
+                    holder.innerHTML = `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Judul Proyek (ID)</label>
+                                <input type="text" name="title_id" value="${data.title_id || ''}" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Project Title (EN)</label>
+                                <input type="text" name="title_en" value="${data.title_en || ''}" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Kategori (ID)</label>
+                                <input type="text" name="category_id" value="${data.category_id || ''}" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Category (EN)</label>
+                                <input type="text" name="category_en" value="${data.category_en || ''}" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Deskripsi (ID)</label>
+                                <textarea name="description_id" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none">${data.description_id || ''}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Description (EN)</label>
+                                <textarea name="description_en" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none">${data.description_en || ''}</textarea>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 font-mono font-bold mb-2 uppercase tracking-wide">Ganti Gambar Hasil Produksi (Opsional)</label>
+                            <div class="relative border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-[#0b0f19]/60 rounded-xl p-4 transition-all flex flex-col items-center justify-center group text-center cursor-pointer">
+                                <input type="file" name="image_file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="updateFileNameDisplay(this, 'file-name-edit-shw')">
+                                <div class="text-slate-500 group-hover:text-indigo-400 transition-colors flex flex-col items-center pointer-events-none">
+                                    <i class="fas fa-cloud-upload-alt text-xl mb-1.5"></i>
+                                    <span id="file-name-edit-shw" class="text-[11px] font-mono">Klik atau seret gambar ke sini untuk mengganti berkas</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if(type === 'web') {
+                    title.innerText = "Kelola Proyek Web Development";
+                    holder.innerHTML = `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Nama Aplikasi Web</label>
+                                <input type="text" name="title" value="${data.title || ''}" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tech Stack</label>
+                                <input type="text" name="tech_stack" value="${data.tech_stack || ''}" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">URL Demo Aplikasi</label>
+                                <input type="text" name="live_url" value="${data.live_url || ''}" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">URL GitHub Repository</label>
+                                <input type="text" name="github_url" value="${data.github_url || ''}" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tantangan (ID)</label>
+                                <textarea name="challenge_id" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500 resize-none">${data.challenge_id || ''}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Challenge Resolved (EN)</label>
+                                <textarea name="challenge_en" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500 resize-none">${data.challenge_en || ''}</textarea>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 font-mono font-bold mb-2 uppercase tracking-wide">Ganti Thumbnail Screenshot (Opsional)</label>
+                            <div class="relative border-2 border-dashed border-slate-800 hover:border-emerald-500/50 bg-[#0b0f19]/60 rounded-xl p-4 transition-all flex flex-col items-center justify-center group text-center cursor-pointer">
+                                <input type="file" name="image_file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="updateFileNameDisplay(this, 'file-name-edit-shw')">
+                                <div class="text-slate-500 group-hover:text-emerald-400 transition-colors flex flex-col items-center pointer-events-none">
+                                    <i class="fas fa-cloud-upload-alt text-xl mb-1.5"></i>
+                                    <span id="file-name-edit-shw" class="text-[11px] font-mono">Klik atau seret gambar ke sini untuk mengganti berkas</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all';
+            }).catch(() => showToast("Gagal mengurai relasi data.", "error"));
+        }
+
+        function openShowcaseAddModal(type) {
+            const modal = document.getElementById('modal-showcase-edit');
+            const title = document.getElementById('modal-showcase-title');
+            const holder = document.getElementById('dynamic-inputs-holder');
+            const delBtn = document.getElementById('btn-modal-del-showcase');
+            
+            document.getElementById('form-showcase-dynamic').reset();
+            document.getElementById('field-shw-id').value = "";
+            document.getElementById('field-shw-type').value = type;
+            if (delBtn) delBtn.classList.add('hidden');
+            
+            holder.innerHTML = "";
+            if (type === 'production') {
+                title.innerText = "Tambah Item Cetak / Produksi Baru";
+                holder.innerHTML = `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Judul Proyek (ID)</label>
+                            <input type="text" name="title_id" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Project Title (EN)</label>
+                            <input type="text" name="title_en" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Kategori (ID)</label>
+                            <input type="text" name="category_id" required placeholder="Contoh: Stiker Vinyl" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Category (EN)</label>
+                            <input type="text" name="category_en" required placeholder="Contoh: Vinyl Sticker" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Deskripsi Singkat (ID)</label>
+                            <textarea name="description_id" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Short Description (EN)</label>
+                            <textarea name="description_en" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 font-mono font-bold mb-2 uppercase tracking-wide">Unggah Gambar Hasil Produksi (Opsional)</label>
+                        <div class="relative border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-[#0b0f19]/60 rounded-xl p-4 transition-all flex flex-col items-center justify-center group text-center cursor-pointer">
+                            <input type="file" name="image_file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="updateFileNameDisplay(this, 'file-name-edit-shw')">
+                            <div class="text-slate-500 group-hover:text-indigo-400 transition-colors flex flex-col items-center pointer-events-none">
+                                <i class="fas fa-cloud-upload-alt text-xl mb-1.5"></i>
+                                <span id="file-name-edit-shw" class="text-[11px] font-mono">Klik atau seret gambar ke sini untuk memilih file</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'web') {
+                title.innerText = "Tambah Aplikasi Web Baru";
+                holder.innerHTML = `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Nama Aplikasi Web</label>
+                            <input type="text" name="title" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tech Stack</label>
+                            <input type="text" name="tech_stack" required placeholder="Contoh: Flask, React, SQLite" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">URL Demo Aplikasi</label>
+                            <input type="text" name="live_url" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">URL GitHub Repository</label>
+                            <input type="text" name="github_url" class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Tantangan Teknis (ID)</label>
+                            <textarea name="challenge_id" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1 font-mono uppercase font-bold text-[10px]">Technical Challenge Resolved (EN)</label>
+                            <textarea name="challenge_en" rows="3" required class="bg-[#0b0f19] border border-slate-800 rounded-xl px-4 py-2.5 text-slate-200 w-full focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 font-mono font-bold mb-2 uppercase tracking-wide">Unggah Thumbnail Screenshot (Opsional)</label>
+                        <div class="relative border-2 border-dashed border-slate-800 hover:border-emerald-500/50 bg-[#0b0f19]/60 rounded-xl p-4 transition-all flex flex-col items-center justify-center group text-center cursor-pointer">
+                            <input type="file" name="image_file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="updateFileNameDisplay(this, 'file-name-edit-shw')">
+                            <div class="text-slate-500 group-hover:text-emerald-400 transition-colors flex flex-col items-center pointer-events-none">
+                                <i class="fas fa-cloud-upload-alt text-xl mb-1.5"></i>
+                                <span id="file-name-edit-shw" class="text-[11px] font-mono">Klik atau seret gambar ke sini untuk memilih file</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all';
+        }
+
+        function closeShowcaseModal() {
+            const modal = document.getElementById('modal-showcase-edit');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function submitShowcaseEditForm(event) {
+            event.preventDefault();
+            const type = document.getElementById('field-shw-type').value;
+            const form = document.getElementById('form-showcase-dynamic');
+            
+            fetch(`/admin/showcase/${type}/save`, { method: 'POST', body: new FormData(form) })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(resData => {
+                if (resData.status === 200) {
+                    showToast(resData.body.message || "Item showcase berhasil diperbarui!");
+                    closeShowcaseModal();
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast("Gagal: " + resData.body.message, "error");
+                }
+            }).catch(() => showToast("Terjadi gangguan jaringan saat menyimpan.", "error"));
+        }
+
+        // ==================== OPERASI INTEGRASI PENGHAPUSAN CRUD ====================
+        // Variables global untuk menyimpan antrean penghapusan
+        let deleteQueue = { type: null, id: null };
+
+        // Fungsi utama untuk memicu Modal Konfirmasi Kustom
+        function confirmAndExecuteDelete(type, id) {
+            // Set antrean data yang akan dihapus jika dikonfirmasi
+            deleteQueue.type = type;
+            deleteQueue.id = id;
+
+            // Kustomisasi teks pesan berdasarkan tipe data
+            const textElement = document.getElementById('confirm-modal-text');
+            if (textElement) {
+                textElement.innerText = `Apakah Anda yakin ingin menghapus data ${type} ini secara permanen? Tindakan ini tidak dapat dibatalkan.`;
+            }
+
+            // Pasang event listener sekali pakai (once) ke tombol konfirmasi eksekusi
+            const executeBtn = document.getElementById('btn-confirm-execute');
+            if (executeBtn) {
+                executeBtn.onclick = executeDeletion;
+            }
+
+            // Tampilkan modal
+            const confirmModal = document.getElementById('modal-custom-confirm');
+            if (confirmModal) {
+                confirmModal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60] transition-all';
+            }
+        }
+
+        // Fungsi eksekusi AJAX setelah user menekan "YA, HAPUS"
+        function executeDeletion() {
+            const { type, id } = deleteQueue;
+            if (!type || !id) return;
+
+            // Tutup modal konfirmasi terlebih dahulu
+            closeCustomConfirm();
+            
+            let url = `/admin/${type}/delete/${id}`;
+            if (type === 'production' || type === 'web') {
+                url = `/admin/showcase/${type}/delete/${id}`;
+            }
+
+            fetch(url, { method: 'POST' })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(resData => {
+                if (resData.status === 200) {
+                    showToast(resData.body.message || "Data berhasil terhapus.");
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    showToast("Gagal: " + resData.body.message, "error");
+                }
+            }).catch(() => showToast("Masalah transmisi data.", "error"));
+        }
+
+        // Fungsi menutup modal konfirmasi kustom
+        function closeCustomConfirm() {
+            const confirmModal = document.getElementById('modal-custom-confirm');
+            if (confirmModal) {
+                confirmModal.classList.remove('flex');
+                confirmModal.classList.add('hidden');
+            }
+            // Reset antrean
+            deleteQueue = { type: null, id: null };
+        }
+
+        function deleteFromModalInside(type) {
+            const idFieldId = `field-${type === 'achievement' ? 'ach' : type}-id`;
+            const targetId = document.getElementById(idFieldId).value;
+            if (!targetId) return;
+            
+            closeModal(type);
+            confirmAndExecuteDelete(type, targetId);
+        }
+
+        function deleteShowcaseFromModalInside() {
+            const type = document.getElementById('field-shw-type').value;
+            const targetId = document.getElementById('field-shw-id').value;
+            if (!targetId) return;
+            
+            closeShowcaseModal();
+            confirmAndExecuteDelete(type, targetId);
+        }
+
+        function updateFileNameDisplay(input, targetId) {
+             const displaySpan = document.getElementById(targetId);
+             if (input.files && input.files.length > 0) {
+                 displaySpan.innerText = `Berkas siap: ${input.files[0].name}`;
+                 displaySpan.classList.remove('text-slate-500');
+                 displaySpan.classList.add('text-emerald-400', 'font-bold');
+             } else {
+                 displaySpan.innerText = "Klik atau seret gambar ke sini untuk memilih file";
+                 displaySpan.className = "text-[11px] font-mono text-slate-500";
+             }
+         }
     </script>
 </body>
 </html>

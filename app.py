@@ -6,12 +6,14 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from dotenv import load_dotenv  # Perbaikan: Hanya mengimpor fungsi yang valid
+from dotenv import load_dotenv  
 
-import smtplib
-from email.mime.text import MIMEText
+# Tambahkan import resmi untuk SDK SendGrid
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Email, To, Content
 import requests
 
 # Muat variabel dari file .env
@@ -24,148 +26,33 @@ DB_NAME = "resume.db"
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
 
-# 2. DEFINISIKAN SEMUA CONFIG URI & BINDS (WAJIB SEBELUM INSTANSIASI DB)
+# 2. CONFIG URI & BINDS
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(INSTANCE_DIR, 'database.db')}"
 
 app.config['SQLALCHEMY_BINDS'] = {
     'admin_db': f"sqlite:///{os.path.join(INSTANCE_DIR, 'admin.db')}",
-    'contact_db': f"sqlite:///{os.path.join(INSTANCE_DIR, 'contact.db')}"
+    'contact_db': f"sqlite:///{os.path.join(INSTANCE_DIR, 'contact.db')}",
+    'showcase_db': f"sqlite:///{os.path.join(INSTANCE_DIR, 'showcase.db')}"
 }
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# 3. INSTANSIASI ELEMEN DB
+# 3. INISIASI ELEMEN DB
 db = SQLAlchemy(app)
-
-# Ambil SECRET_KEY dari .env (jika tidak ada, gunakan default fallback yang aman)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-fallback-key-12345')
 
-# Regex standar internasional untuk validasi email
+# Regex validasi email
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 
 def jakarta_now():
     return datetime.now(ZoneInfo("Asia/Jakarta")).replace(tzinfo=None)
-
-# ================= 1. KONFIGURASI FLASK-LOGIN =================
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'admin_login'
-
-# ================= MODEL USER ADMIN DI APP.PY =================
-@login_manager.user_loader
-def load_user(user_id):
-    return AdminUser.query.get(int(user_id))
-
-# ================= 3. ROUTE LOGIN ADMIN =================
-@app.route('/admin')
-def admin_index():
-    if current_user.is_authenticated:
-        return redirect(url_for('admin_dashboard'))
-    return redirect(url_for('admin_login'))
-
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    if current_user.is_authenticated:
-        return redirect(url_for('admin_dashboard'))
-        
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        admin = AdminUser.query.filter_by(username=username).first()
-        
-        if admin and check_password_hash(admin.password_hash, password):
-            login_user(admin)
-            return redirect(url_for('admin_dashboard'))
-            
-        flash('Username atau password salah!', 'error')
-        
-    return render_template('admin_login.html')
-
-# ================= 4. ROUTE DASHBOARD UTAMA (TERPROTEKSI) =================
-
-@app.before_request
-def track_page_view():
-    if not request.path.startswith('/static') and not request.path.startswith('/admin'):
-        try:
-            view = PageView(
-                page_url=request.path,
-                user_agent=request.user_agent.string,
-                ip_address=request.remote_addr
-            )
-            db.session.add(view)
-            db.session.commit()
-            
-        except Exception:
-            db.session.rollback()
-
-@app.route('/api/track-click', methods=['POST'])
-def track_click():
-    data = request.get_json() or {}
-    button = data.get('button')
-
-    if button in ['facebook', 'instagram', 'github', 'email', 'linkedin']:
-        try:
-            log = ClickLog(button_name=button)
-            db.session.add(log)
-            db.session.commit()
-            return jsonify({"status": "success"}), 200
-        except Exception:
-            db.session.rollback()
-    return jsonify({"status": "error"}), 400
-
-@app.route('/admin/dashboard')
-@login_required
-def admin_dashboard():
-    messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
-    total_views = PageView.query.count()
     
-    click_stats = db.session.query(
-        ClickLog.button_name, func.count(ClickLog.id)
-    ).group_by(ClickLog.button_name).all()
-    clicks_data = {item[0]: item[1] for item in click_stats}
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static/uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
     
-    views_raw = PageView.query.all()
-    device_data = {"Mobile": 0, "Desktop": 0}
-    for v in views_raw:
-        ua = v.user_agent.lower() if v.user_agent else ""
-        if "mobile" in ua or "android" in ua or "iphone" in ua:
-            device_data["Mobile"] += 1
-        else:
-            device_data["Desktop"] += 1
-
-    profile = ProfileSection.query.first()
-    experiences = Experience.query.order_by(Experience.start_date.desc()).all()
-    skills = Skill.query.order_by(Skill.id.desc()).all()
-    achievements = Achievement.query.order_by(Achievement.id.desc()).all()
-
-    return render_template('admin_dashboard.html', 
-                           messages=messages, 
-                           total_views=total_views, 
-                           clicks_data=clicks_data, 
-                           device_data=device_data,
-                           profile=profile,
-                           experiences=experiences,
-                           skills=skills,
-                           achievements=achievements)
-
-@app.route('/admin/message/delete/<int:id>', methods=['POST'])
-@login_required
-def delete_message(id):
-    msg = ContactMessage.query.get_or_404(id)
-    try:
-        db.session.delete(msg)
-        db.session.commit()
-        return jsonify({"status": "success", "message": "Pesan berhasil dihapus."}), 200
-    except Exception:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": "Gagal menghapus pesan."}), 500
-
-@app.route('/admin/logout')
-@login_required
-def admin_logout():
-    logout_user()
-    return redirect(url_for('admin_login'))
-
+    
 # =========================================================================
 # DATABASE UTAMA (database.db)
 # =========================================================================
@@ -225,6 +112,7 @@ class PageView(db.Model):
     page_url = db.Column(db.String(100), nullable=False)
     user_agent = db.Column(db.String(255))
     ip_address = db.Column(db.String(50))
+    location = db.Column(db.String(100), default='Unknown')
     timestamp = db.Column(db.DateTime, default=jakarta_now)
 
 class ClickLog(db.Model):
@@ -232,14 +120,235 @@ class ClickLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     button_name = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, default=jakarta_now)
+    
+# =========================================================================
+# DATABASE SHOWCASE TERPISAH (showcase.db)
+# =========================================================================
+class ProductionGallery(db.Model):
+    __bind_key__ = 'showcase_db'
+    id = db.Column(db.Integer, primary_key=True)
+    title_id = db.Column(db.String(100), nullable=False)
+    title_en = db.Column(db.String(100), nullable=False)
+    category_id = db.Column(db.String(50), nullable=False)
+    category_en = db.Column(db.String(50), nullable=False)
+    image_filename = db.Column(db.String(100), nullable=False)
+    description_id = db.Column(db.Text, nullable=False)
+    description_en = db.Column(db.Text, nullable=False)
 
-# ================= ROUTE VIEW CMS EDITOR =================
+class WebProject(db.Model):
+    __bind_key__ = 'showcase_db'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    image_filename = db.Column(db.String(100), nullable=False)
+    tech_stack = db.Column(db.String(200), nullable=False)
+    challenge_id = db.Column(db.Text, nullable=False)
+    challenge_en = db.Column(db.Text, nullable=False)
+    live_url = db.Column(db.String(200), nullable=True)
+    github_url = db.Column(db.String(200), nullable=True)
+
+# ================= 1. KONFIGURASI FLASK-LOGIN =================
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'admin_login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return AdminUser.query.get(int(user_id))
+
+
+# ================= SINKRONISASI GEOLOCATION UTAMA =================
+def get_visitor_location(ip_address):
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+        
+    if not ip_address or ip_address in ['127.0.0.1', 'localhost', '::1']:
+        return "Localhost (Development)"
+        
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(f"https://ipapi.co/{ip_address}/json/", headers=headers, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('error'):
+                return "Private IP (No GeoData)"
+            city = data.get('city', 'Unknown City')
+            country = data.get('country_name', 'Unknown Country')
+            return f"{city}, {country}"
+    except Exception as e:
+        print(f"Gagal melacak lokasi IP: {e}")
+        
+    return "Unknown Location"
+
+
+# ================= 4. ROUTE PENCATAT ANALITIK (FIXED FILTER) =================
+@app.before_request
+def track_page_view():
+    ignored_paths = ['/admin', '/static', '/api', '/contact/submit', '/robots.txt', '/sitemap.xml', '/favicon.ico']
+    
+    should_track = True
+    for path in ignored_paths:
+        if request.path.startswith(path):
+            should_track = False
+            break
+
+    if should_track:
+        try:
+            ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+            if ip_address:
+                ip_address = ip_address.split(',')[0].strip()
+
+            location = get_visitor_location(ip_address)
+
+            view = PageView(
+                page_url=request.path,
+                user_agent=request.user_agent.string,
+                ip_address=ip_address,
+                location=location 
+            )
+            db.session.add(view)
+            db.session.commit()
+            
+        except Exception:
+            db.session.rollback()
+
+
+# ================= EMAIL NOTIFIKASI MENGGUNAKAN SENDGRID API =================
+def send_email_notification(name, email, subject, message):
+    api_key = os.getenv('SENDGRID_API_KEY')
+    sender_email = os.getenv('SENDER_EMAIL')
+    receiver_email = "danielsetiawan22@gmail.com"
+
+    email_content = (
+        f"Anda menerima pesan baru dari kontak portofolio:\n\n"
+        f"Nama Pengirim: {name}\n"
+        f"Email Pengirim: {email}\n"
+        f"Subjek: {subject}\n\n"
+        f"Isi Pesan:\n{message}"
+    )
+
+    mail = Mail(
+        from_email=Email(sender_email, "Portfolio Notification"),
+        to_emails=To(receiver_email),
+        subject=f"[PORTFOLIO INBOX] {subject}",
+        plain_text_content=Content("text/plain", email_content)
+    )
+
+    try:
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(mail)
+        print(f"Notifikasi email terkirim via SendGrid API! Status: {response.status_code}")
+    except Exception as e:
+        print(f"Gagal mengirim via SendGrid Web API: {e}")
+
+
+# ================= 3. ROUTE LOGIN ADMIN =================
+@app.route('/admin')
+def admin_index():
+    if current_user.is_authenticated:
+        return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if current_user.is_authenticated:
+        return redirect(url_for('admin_dashboard'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        admin = AdminUser.query.filter_by(username=username).first()
+        
+        if admin and check_password_hash(admin.password_hash, password):
+            login_user(admin)
+            return redirect(url_for('admin_dashboard'))
+            
+        flash('Username atau password salah!', 'error')
+        
+    return render_template('admin_login.html')
+
+@app.route('/api/track-click', methods=['POST'])
+def track_click():
+    data = request.get_json() or {}
+    button = data.get('button')
+
+    if button in ['facebook', 'instagram', 'github', 'email', 'linkedin']:
+        try:
+            log = ClickLog(button_name=button)
+            db.session.add(log)
+            db.session.commit()
+            return jsonify({"status": "success"}), 200
+        except Exception:
+            db.session.rollback()
+    return jsonify({"status": "error"}), 400
+
+@app.route('/admin/dashboard')
+@login_required
+def admin_dashboard():
+    messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
+    total_views = PageView.query.count()
+    recent_views = PageView.query.order_by(PageView.timestamp.desc()).limit(50).all()
+    
+    click_stats = db.session.query(
+        ClickLog.button_name, func.count(ClickLog.id)
+    ).group_by(ClickLog.button_name).all()
+    clicks_data = {item[0]: item[1] for item in click_stats}
+    
+    views_raw = PageView.query.all()
+    device_data = {"Mobile": 0, "Desktop": 0}
+    for v in views_raw:
+        ua = v.user_agent.lower() if v.user_agent else ""
+        if "mobile" in ua or "android" in ua or "iphone" in ua:
+            device_data["Mobile"] += 1
+        else:
+            device_data["Desktop"] += 1
+
+    profile = ProfileSection.query.first()
+    experiences = Experience.query.order_by(Experience.start_date.desc()).all()
+    skills = Skill.query.order_by(Skill.id.desc()).all()
+    achievements = Achievement.query.order_by(Achievement.id.desc()).all()
+
+    gallery_items = ProductionGallery.query.order_by(ProductionGallery.id.desc()).all()
+    web_projects = WebProject.query.order_by(WebProject.id.desc()).all()
+
+    return render_template('admin_dashboard.html', 
+                           messages=messages, 
+                           total_views=total_views, 
+                           recent_views=recent_views,
+                           clicks_data=clicks_data, 
+                           device_data=device_data,
+                           profile=profile,
+                           experiences=experiences,
+                           skills=skills,
+                           achievements=achievements,
+                           gallery=gallery_items,     
+                           projects=web_projects)     
+
+@app.route('/admin/message/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_message(id):
+    msg = ContactMessage.query.get_or_404(id)
+    try:
+        db.session.delete(msg)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Pesan berhasil dihapus."}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "Gagal menghapus pesan."}), 500
+
+@app.route('/admin/logout')
+@login_required
+def admin_logout():
+    logout_user()
+    return redirect(url_for('admin_login'))
+
+# ================= ROUTE VIEW CMS EDITOR RESUME =================
 @app.route('/admin/edit-content')
 @login_required
 def admin_edit_content():
     profile = ProfileSection.query.first() or ProfileSection(bio_id="", bio_en="")
     experiences = Experience.query.order_by(Experience.start_date.desc()).all()
-    skills = Skill.query.order_by(Skill.id.desc()).all()
+    skills = Skill.query.order_by(Skill.id.desc()).all() 
     achievements = Achievement.query.order_by(Achievement.id.desc()).all()
     
     return render_template('admin_edit.html', 
@@ -248,6 +357,17 @@ def admin_edit_content():
                            skills=skills, 
                            achievements=achievements)
 
+# ================= ROUTE VIEW CMS EDITOR SHOWCASE TERPISAH =================
+@app.route('/admin/edit-showcase')
+@login_required
+def admin_edit_showcase():
+    gallery_items = ProductionGallery.query.order_by(ProductionGallery.id.desc()).all()
+    web_projects = WebProject.query.order_by(WebProject.id.desc()).all()
+    
+    return render_template('admin_edit_showcase.html', 
+                           gallery=gallery_items, 
+                           projects=web_projects)
+                           
 @app.route('/admin/get-data/<type>/<id>', methods=['GET'])
 @login_required
 def admin_get_data(type, id):
@@ -285,24 +405,61 @@ def admin_get_data(type, id):
             "subtext_id": ac.subtext_id,
             "subtext_en": ac.subtext_en
         })
+
+    # FIX: Menambahkan data lampiran balik JSON untuk showcase cetak & aplikasi web
+    elif type == 'production':
+        prod = ProductionGallery.query.get_or_404(id)
+        return jsonify({
+            "id": prod.id,
+            "title_id": prod.title_id,
+            "title_en": prod.title_en,
+            "category_id": prod.category_id,
+            "category_en": prod.category_en,
+            "description_id": prod.description_id,
+            "description_en": prod.description_en
+        })
+
+    elif type == 'web':
+        web = WebProject.query.get_or_404(id)
+        return jsonify({
+            "id": web.id,
+            "title": web.title,
+            "tech_stack": web.tech_stack,
+            "challenge_id": web.challenge_id,
+            "challenge_en": web.challenge_en,
+            "live_url": web.live_url,
+            "github_url": web.github_url
+        })
         
     return jsonify({"status": "error", "message": "Invalid type"}), 400
 
 @app.route('/admin/skill/save', methods=['POST'])
 @login_required
 def save_skill():
-    skill_id = request.form.get('id')
-    skill = Skill.query.get(skill_id) if skill_id else Skill()
-    if not skill_id: db.session.add(skill)
-    
-    skill.category = request.form.get('category')
-    skill.name_id = request.form.get('name_id')
-    skill.name_en = request.form.get('name_en')
-    skill.level_id = request.form.get('level_id')
-    skill.level_en = request.form.get('level_en')
-    
-    db.session.commit()
-    return jsonify({"status": "success", "message": "Keahlian berhasil disimpan!"}), 200
+    try:
+        skill_id = request.form.get('id')
+        
+        # Validasi aman untuk menangani ID kosong atau ID bertuliskan 'new'
+        if skill_id and skill_id != 'new' and skill_id.strip() != '':
+            skill = Skill.query.get_or_404(int(skill_id))
+        else:
+            skill = Skill()
+            db.session.add(skill)
+            
+        skill.category = request.form.get('category')
+        skill.name_id = request.form.get('name_id')
+        
+        # PERBAIKAN: Isi name_en menggunakan fallback name_id jika input HTML-nya tidak ada
+        skill.name_en = request.form.get('name_en') or request.form.get('name_id')
+        
+        skill.level_id = request.form.get('level_id')
+        skill.level_en = request.form.get('level_en')
+        
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Keahlian berhasil disimpan!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menyimpan: {str(e)}"})
 
 @app.route('/admin/achievement/save', methods=['POST'])
 @login_required
@@ -336,25 +493,189 @@ def update_bio():
 @app.route('/admin/experience/save', methods=['POST'])
 @login_required
 def save_experience():
-    exp_id = request.form.get('id')
-    
-    if exp_id:
-        exp = Experience.query.get_or_404(exp_id)
-    else:
-        exp = Experience()
-        db.session.add(exp)
+    try:
+        exp_id = request.form.get('id')
         
-    exp.title_id = request.form.get('title_id')
-    exp.title_en = request.form.get('title_en')
-    exp.company = request.form.get('company')
-    exp.period = request.form.get('period')
-    exp.description_id = request.form.get('description_id')
-    exp.description_en = request.form.get('description_en')
-    exp.tech_stack = request.form.get('tech_stack')
-    
-    db.session.commit()
-    return jsonify({"status": "success", "message": "Data pengalaman kerja disimpan!"}), 200
+        if exp_id:
+            exp = Experience.query.get_or_404(exp_id)
+        else:
+            exp = Experience()
+            db.session.add(exp)
+            
+        exp.title_id = request.form.get('title_id')
+        exp.title_en = request.form.get('title_en')
+        exp.company = request.form.get('company')
+        exp.description_id = request.form.get('description_id')
+        exp.description_en = request.form.get('description_en')
+        exp.tech_stack = request.form.get('tech_stack')
+        
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+        
+        # Fungsi helper internal untuk mendeteksi berbagai format tanggal browser
+        def parse_date_flexible(date_str):
+            if not date_str:
+                return None
+            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y/%m/%d', '%d-%m-%Y'):
+                try:
+                    return datetime.strptime(date_str, fmt).date()
+                except ValueError:
+                    continue
+            raise ValueError(f"Format tanggal '{date_str}' tidak dikenali sistem")
 
+        if start_date_str:
+            exp.start_date = parse_date_flexible(start_date_str)
+        if end_date_str:
+            exp.end_date = parse_date_flexible(end_date_str)
+        else:
+            exp.end_date = None
+            
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Data pengalaman kerja disimpan!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menyimpan: {str(e)}"}), 500
+    
+@app.route('/admin/showcase/production/save', methods=['POST'])
+@login_required
+def save_production():
+    try:
+        prod_id = request.form.get('id')
+        if prod_id:
+            new_item = ProductionGallery.query.get_or_404(prod_id)
+        else:
+            new_item = ProductionGallery()
+            db.session.add(new_item)
+
+        new_item.title_id = request.form.get('title_id')
+        new_item.title_en = request.form.get('title_en')
+        new_item.category_id = request.form.get('category_id')
+        new_item.category_en = request.form.get('category_en')
+        new_item.description_id = request.form.get('description_id')
+        new_item.description_en = request.form.get('description_en')
+        
+        file = request.files.get('image_file')
+        if file and file.filename != '' and allowed_file(file.filename):
+            filename = secure_filename(f"prod_{jakarta_now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            new_item.image_filename = filename
+        elif not prod_id:
+            new_item.image_filename = "default_placeholder.png" 
+            
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Item produksi berhasil disimpan!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menyimpan: {str(e)}"}), 500
+
+@app.route('/admin/showcase/web/save', methods=['POST'])
+@login_required
+def save_web_project():
+    try:
+        web_id = request.form.get('id')
+        if web_id:
+            new_project = WebProject.query.get_or_404(web_id)
+        else:
+            new_project = WebProject()
+            db.session.add(new_project)
+
+        new_project.title = request.form.get('title')
+        new_project.tech_stack = request.form.get('tech_stack')
+        new_project.challenge_id = request.form.get('challenge_id')
+        new_project.challenge_en = request.form.get('challenge_en')
+        new_project.live_url = request.form.get('live_url')
+        new_project.github_url = request.form.get('github_url')
+        
+        file = request.files.get('image_file')
+        if file and file.filename != '' and allowed_file(file.filename):
+            filename = secure_filename(f"web_{jakarta_now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            new_project.image_filename = filename
+        elif not web_id:
+            new_project.image_filename = "default_placeholder.png" 
+            
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Proyek web berhasil disimpan!"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menyimpan: {str(e)}"}), 500
+        
+        # =========================================================================
+# ROUTE HAPUS DATA RESUME
+# =========================================================================
+@app.route('/admin/experience/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_experience(id):
+    try:
+        exp = Experience.query.get_or_404(id)
+        db.session.delete(exp)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Pengalaman kerja berhasil dihapus!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menghapus: {str(e)}"}), 500
+
+@app.route('/admin/skill/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_skill(id):
+    try:
+        sk = Skill.query.get_or_404(id)
+        db.session.delete(sk)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Keahlian berhasil dihapus!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menghapus: {str(e)}"}), 500
+
+@app.route('/admin/achievement/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_achievement(id):
+    try:
+        ach = Achievement.query.get_or_404(id)
+        db.session.delete(ach)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Prestasi/Organisasi berhasil dihapus!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menghapus: {str(e)}"}), 500
+
+# =========================================================================
+# ROUTE HAPUS DATA SHOWCASE
+# =========================================================================
+@app.route('/admin/showcase/production/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_production(id):
+    try:
+        prod = ProductionGallery.query.get_or_404(id)
+        # Hapus berkas gambar fisiknya jika bukan default placeholder
+        if prod.image_filename and prod.image_filename != "default_placeholder.png":
+            img_path = os.path.join(app.config['UPLOAD_FOLDER'], prod.image_filename)
+            if os.path.exists(img_path):
+                os.remove(img_path)
+        db.session.delete(prod)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Item produksi berhasil dihapus!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menghapus: {str(e)}"}), 500
+
+@app.route('/admin/showcase/web/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_web_project(id):
+    try:
+        web = WebProject.query.get_or_404(id)
+        if web.image_filename and web.image_filename != "default_placeholder.png":
+            img_path = os.path.join(app.config['UPLOAD_FOLDER'], web.image_filename)
+            if os.path.exists(img_path):
+                os.remove(img_path)
+        db.session.delete(web)
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Proyek web berhasil dihapus!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"Gagal menghapus: {str(e)}"}), 500
+        
 # Kamus Teks Multibahasa
 MULTILINGUAL_DATA = {
     "id": {
@@ -435,15 +756,41 @@ CONTACT_TEXTS = {
     }
 }
 
+# ================= RUTE HALAMAN UTAMA HUB =================
 @app.route('/')
 def home():
     lang = request.args.get('lang', 'id')
     if lang not in MULTILINGUAL_DATA: lang = 'id'
     profile_data = MULTILINGUAL_DATA[lang].copy()
     profile_data["links"] = [
-        {"name": "Find Out About Me" if lang == "en" else "Ketahui Tentang Saya", "url": f"/resume?lang={lang}", "icon": "fas fa-file-invoice", "is_internal": True},
-        {"name": "Check my GitHub" if lang == "en" else "Lihat GitHub Saya", "url": "https://github.com/danielsetiawan22", "icon": "fab fa-github", "is_internal": False},
-        {"name": "Let's Connect!" if lang == "en" else "Mari Berdiskusi", "url": f"/contact?lang={lang}", "icon": "fas fa-envelope", "is_internal": True}
+        {
+            "name": "Find Out About Me" if lang == "en" else "Ketahui Tentang Saya", 
+            "url": f"/resume?lang={lang}", 
+            "icon": "fas fa-file-invoice", 
+            "is_internal": True,
+            "subtext": "Read my professional resume & history" if lang == "en" else "Baca riwayat hidup & pengalaman profesional saya"
+        },
+        {
+            "name": "My Showcase" if lang == "en" else "Showcase Saya", 
+            "url": f"/showcase?lang={lang}", 
+            "icon": "fas fa-shapes", 
+            "is_internal": True,
+            "subtext": "View print productions & web applications" if lang == "en" else "Lihat hasil cetak produksi & aplikasi web"
+        },
+        {
+            "name": "Check my GitHub" if lang == "en" else "Lihat GitHub Saya", 
+            "url": "https://github.com/danielsetiawan22", 
+            "icon": "fab fa-github", 
+            "is_internal": False,
+            "subtext": "Explore my open-source repositories" if lang == "en" else "Eksplorasi repositori kode terbuka saya"
+        },
+        {
+            "name": "Let's Connect!" if lang == "en" else "Mari Berdiskusi", 
+            "url": f"/contact?lang={lang}", 
+            "icon": "fas fa-envelope", 
+            "is_internal": True,
+            "subtext": "Send project inquiries or business discussions" if lang == "en" else "Kirimkan penawaran proyek atau diskusi bisnis"
+        }
     ]
     return render_template('index.html', user=profile_data)
 
@@ -465,99 +812,33 @@ def resume_page():
 
     return render_template('resume.html', ui=ui, user=user_data, experiences=experiences, skills=skills, achievements=achievements_data)
 
+@app.route('/showcase')
+def showcase_page():
+    lang = request.args.get('lang', 'id')
+    if lang not in ['id', 'en']: lang = 'id'
+    
+    gallery_items = ProductionGallery.query.order_by(ProductionGallery.id.desc()).all()
+    web_projects = WebProject.query.order_by(WebProject.id.desc()).all()
+    
+    nav_texts = {
+        "id": {"title": "Showcase Portofolio", "back": "Kembali ke Hub", "subtitle": "Eksplorasi karya produksi cetak skala nasional dan pengembangan aplikasi web modern."},
+        "en": {"title": "Portfolio Showcase", "back": "Back to Hub", "subtitle": "Exploration of national-scale print production and modern web engineering."}
+    }
+    
+    return render_template('showcase.html', 
+                           gallery=gallery_items, 
+                           projects=web_projects, 
+                           lang=lang, 
+                           ui=nav_texts[lang])
 
-# ================= INJEKSI VARIABEL AMAN UNTUK EMAIL NOTIFIKASI =================
-def send_email_notification(name, email, subject, message):
-    SENDER_EMAIL = os.getenv('SENDER_EMAIL')
-    SENDER_PASSWORD = os.getenv('SENDER_PASSWORD') 
-    RECEIVER_EMAIL = "hello@danielsetiawan.com"
-
-    msg = MIMEText(f"Nama Pengirim: {name}\nEmail: {email}\n\nPesan:\n{message}")
-    msg['Subject'] = f"[PORTFOLIO INBOX] {subject}"
-    msg['From'] = SENDER_EMAIL
-    msg['To'] = RECEIVER_EMAIL
-
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.sendmail(SENDER_EMAIL, [RECEIVER_EMAIL], msg.as_string())
-        print("Notifikasi email berhasil dikirim!")
-    except Exception as e:
-        print(f"Gagal mengirim notifikasi email: {e}")
-   
-# =========================================================================
-# ROUTE CONTACT FORM & SUBMISSION (MENGGUNAKAN ENVIRONMENT VARIABLES)
-# =========================================================================
 @app.route('/contact', methods=['GET'])
 def contact_page():
     lang = request.args.get('lang', 'id')
     if lang not in ['id', 'en']:
         lang = 'id'
-    
     ui = CONTACT_TEXTS[lang]
     return render_template('contact.html', ui=ui)
 
-
-@app.route('/contact/submit', methods=['POST'])
-def contact_submit():
-    lang = request.args.get('lang', 'id')
-    if lang not in ['id', 'en']:
-        lang = 'id'
-
-    # 1. VALIDASI CLOUDFLARE TURNSTILE (Menggunakan variabel lingkungan)
-    turnstile_response = request.form.get('cf-turnstile-response')
-    payload = {
-        'secret': os.getenv('TURNSTILE_SECRET'), 
-        'response': turnstile_response
-    }
-    try:
-        verify_response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=payload)
-        outcome = verify_response.json()
-        if not outcome.get('success'):
-            err_bot = "Validasi keamanan anti-bot gagal!" if lang == 'id' else "Anti-bot verification failed!"
-            return jsonify({"status": "error", "message": err_bot}), 400
-    except Exception:
-        return jsonify({"status": "error", "message": "Turnstile verification service unavailable"}), 500
-    
-    # 2. AMBIL DATA FORMULIR
-    name = request.form.get('name')
-    email = request.form.get('email')
-    subject = request.form.get('subject')
-    message = request.form.get('message')
-    
-    # 3. VALIDASI KEKOSONGAN FIELD
-    if not name or not email or not subject or not message:
-        err_msg = "Semua field wajib diisi!" if lang == 'id' else "All fields are required!"
-        return jsonify({"status": "error", "message": err_msg}), 400
-
-    # 4. VALIDASI STRUKTUR EMAIL (REGEX)
-    if not re.match(EMAIL_REGEX, email.strip()):
-        invalid_msg = "Format alamat email tidak valid!" if lang == 'id' else "Invalid email address format!"
-        return jsonify({"status": "error", "message": invalid_msg}), 400
-
-    # 5. TERUSKAN SIMPAN KE DATABASE & KIRIM NOTIFIKASI EMAIL
-    try:
-        waktu_jakarta = jakarta_now()
-        new_msg = ContactMessage(
-            name=name,
-            email=email.strip().lower(),
-            subject=subject,
-            message=message,
-            created_at=waktu_jakarta
-        )
-        db.session.add(new_msg)
-        db.session.commit()
-
-        # Pemicu fungsi notifikasi aman
-        send_email_notification(name, email.strip().lower(), subject, message)
-        
-        succ_msg = "Pesan Anda berhasil dikirim!" if lang == 'id' else "Your message has been sent successfully!"
-        return jsonify({"status": "success", "message": succ_msg}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": "Database error atau kegagalan sistem."}), 500
-        
 @app.route('/robots.txt')
 def robots():
     return "User-agent: *\nDisallow: /admin\nSitemap: https://danielsetiawan.com/sitemap.xml", 200, {'Content-Type': 'text/plain'}
@@ -568,6 +849,7 @@ def sitemap():
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
         <url><loc>https://www.danielsetiawan.com/</loc><priority>1.0</priority></url>
         <url><loc>https://www.danielsetiawan.com/resume</loc><priority>0.8</priority></url>
+        <url><loc>https://www.danielsetiawan.com/showcase</loc><priority>0.8</priority></url>
     </urlset>
     """
     return xml, 200, {'Content-Type': 'application/xml'}

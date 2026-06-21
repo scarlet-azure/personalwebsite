@@ -131,7 +131,7 @@
                             
                             <!-- CONTAINER TURNSTILE YANG BERSIH -->
                             <div class="my-4 min-h-[65px] flex justify-start">
-                                <div class="cf-turnstile" data-sitekey="0x4AAAAAADnBgEe4-SRYD2NR" data-theme="dark"></div>
+                                <div class="cf-turnstile" data-sitekey="0x4AAAAAADnBgEe4-SRYD2NR" data-theme="dark" data-mode="managed"></div>
                             </div>
 
                             <div id="form-status" class="hidden text-xs font-mono p-3 rounded-xl transition-all"></div>
@@ -148,16 +148,24 @@
                 <!-- FOOTER -->
                 <div class="theme-border-divider w-full pt-6 mt-12 border-t border-slate-800 text-[10px] font-mono text-slate-500 flex justify-between items-center gap-4">
                     <div>&copy; 2026 Daniel Setiawan</div>
-                    <div class="hidden sm:block shrink-0">All rights reserved.</div>
+                    <div>All rights reserved.</div>
                 </div>
 
             </div>
         </main>
         
     </div>
+  
+<!-- ================= TOMBOL BACK TO TOP (MELAYANG) ================= -->
+    <button id="back-to-top" onclick="scrollToTop()" 
+            class="fixed bottom-6 right-6 w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-lg cursor-pointer transition-all duration-300 opacity-0 translate-y-10 pointer-events-none z-50 group">
+        <i class="fas fa-arrow-up text-sm group-hover:-translate-y-0.5 transition-transform"></i>
+    </button>
+ 
 
     <!-- LOGIKA JAVASCRIPT AJAX & SWITCHER -->
     <script>
+
         function updateIcon() {
             const icon = document.getElementById('theme-icon');
             if (document.documentElement.getAttribute('data-theme') === 'light') { 

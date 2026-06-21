@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS Showcase Editor | Daniel Setiawan</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen p-4 sm:p-8 md:p-12">
+    <div class="max-w-5xl mx-auto w-full">
+        
+        <!-- NAV BAR EDITOR -->
+        <div class="flex justify-between items-center border-b border-slate-800 pb-6 mb-8 gap-4">
+            <div>
+                <h1 class="font-display text-xl md:text-2xl font-extrabold tracking-wide uppercase text-white">Showcase Portfolio Editor</h1>
+                <div class="flex items-center space-x-3 mt-2 text-xs font-mono">
+                    <a href="/admin/dashboard" class="text-slate-400 hover:text-indigo-400"><i class="fas fa-inbox mr-1"></i> Inbox Messages</a>
+                    <span class="text-slate-700">|</span>
+                    <a href="/admin/edit-content" class="px-3 py-1.5 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
+                        <i class="fas fa-edit mr-1"></i> Edit Resume
+                    </a>
+                    <a href="/admin/edit-showcase" class="px-3 py-1.5 border border-indigo-500 bg-indigo-600/10 rounded-xl text-white font-bold">
+                        <i class="fas fa-images mr-1.5"></i> Edit Showcase
+                    </a>
+                </div>
+            </div>
+            <a href="/admin/logout" class="px-4 py-2 bg-slate-800 hover:bg-rose-600/20 hover:text-rose-400 text-slate-300 text-xs font-medium rounded-xl transition-all font-mono border border-slate-700/60">LOGOUT</a>
+        </div>
+
+        <!-- MAIN FORM FOR SHOWCASE CONTENT -->
+        <div class="space-y-12 mt-8">
+
+            <!-- FORM INPUT KARYA PRODUKSI/CETAK -->
+            <div class="p-6 bg-slate-900/40 border border-slate-800 rounded-2xl shadow-sm">
+                <h3 class="text-xs font-bold font-mono text-indigo-400 uppercase tracking-widest mb-4 flex items-center">
+                    <i class="fas fa-print mr-2"></i> Tambah Portofolio Cetak / Produksi
+                </h3>
+                <form id="form-production" onsubmit="submitShowcaseForm(event, 'production')" enctype="multipart/form-data" class="space-y-4 text-xs font-mono">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input type="text" name="title_id" placeholder="Judul Proyek (ID)" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500" required>
+                        <input type="text" name="title_en" placeholder="Project Title (EN)" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500" required>
+                        <input type="text" name="category_id" placeholder="Kategori (e.g., Stiker Vinyl)" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500" required>
+                        <input type="text" name="category_en" placeholder="Category (e.g., Vinyl Sticker)" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500" required>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <textarea name="description_id" placeholder="Deskripsi Singkat (ID)" rows="3" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 resize-none" required></textarea>
+                        <textarea name="description_en" placeholder="Short Description (EN)" rows="3" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 resize-none" required></textarea>
+                    </div>
+                    <div class="flex items-center justify-between flex-wrap gap-4 pt-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1">UNGGAH GAMBAR HASIL PRODUKSI:</label>
+                            <input type="file" name="image_file" accept="image/*" class="text-slate-400" required>
+                        </div>
+                        <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors font-bold uppercase tracking-wider cursor-pointer">Simpan Item Cetak</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- FORM INPUT APLIKASI WEB -->
+            <div class="p-6 bg-slate-900/40 border border-slate-800 rounded-2xl shadow-sm">
+                <h3 class="text-xs font-bold font-mono text-emerald-400 uppercase tracking-widest mb-4 flex items-center">
+                    <i class="fas fa-code mr-2"></i> Tambah Portofolio Web Development
+                </h3>
+                <form id="form-webproject" onsubmit="submitShowcaseForm(event, 'web')" enctype="multipart/form-data" class="space-y-4 text-xs font-mono">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <input type="text" name="title" placeholder="Nama Aplikasi Web" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-emerald-500" required>
+                        <input type="text" name="tech_stack" placeholder="Tech Stack (e.g., Flask, React, SQLite)" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-emerald-500" required>
+                        <input type="url" name="live_url" placeholder="URL Demo Aplikasi (https://...)" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-emerald-500">
+                        <input type="url" name="github_url" placeholder="URL Github Repository (https://...)" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <textarea name="challenge_id" placeholder="Tantangan Teknis yang Diselesaikan (ID)" rows="3" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-emerald-500 resize-none" required></textarea>
+                        <textarea name="challenge_en" placeholder="Technical Challenge Resolved (EN)" rows="3" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-emerald-500 resize-none" required></textarea>
+                    </div>
+                    <div class="flex items-center justify-between flex-wrap gap-4 pt-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1">UNGGAH THUMBNAIL SCREENSHOT:</label>
+                            <input type="file" name="image_file" accept="image/*" class="text-slate-400" required>
+                        </div>
+                        <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors font-bold uppercase tracking-wider cursor-pointer">Simpan Proyek Web</button>
+                    </div>
+                </form>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT AJAX HANDLER -->
+    <script>
+        function submitShowcaseForm(event, type) {
+            event.preventDefault();
+            const form = document.getElementById(`form-${type==='production'?'production':'webproject'}`);
+            
+            fetch(`/admin/showcase/${type}/save`, { method: 'POST', body: new FormData(form) })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                if(data.status === 'success') {
+                    location.reload();
+                }
+            })
+            .catch(() => alert("Gagal mengunggah item showcase ke server VPS."));
+        }
+    </script>
+</body>
+</html>
