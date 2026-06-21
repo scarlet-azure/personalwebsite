@@ -227,6 +227,29 @@
                 submitBtn.innerHTML = `<span>{{ ui.btn_send }}</span><i class="fas fa-paper-plane text-xs"></i>`;
             });
         }
+      // --- LOGIKA TOMBOL BACK TO TOP ---
+      const backToTopBtn = document.getElementById('back-to-top');
+
+      // Pantau scroll event untuk memunculkan/menyembunyikan tombol
+      window.addEventListener('scroll', () => {
+          if (window.scrollY > 300) {
+              // Tampilkan tombol jika scroll sudah melewati 300px
+              backToTopBtn.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+              backToTopBtn.classList.add('opacity-100', 'translate-y-0', 'pointer-events-auto');
+          } else {
+              // Sembunyikan kembali jika di atas 300px
+              backToTopBtn.classList.remove('opacity-100', 'translate-y-0', 'pointer-events-auto');
+              backToTopBtn.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+          }
+      });
+
+      // Fungsi untuk melakukan smooth scroll ke atas
+      function scrollToTop() {
+          window.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+          });
+      }
     </script>
     <!-- LOADER API DI LETAKKAN MURNI SEBELUM TAG PENUTUP BODY YANG SEBENARNYA -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
